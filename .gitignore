@@ -1,0 +1,6 @@
+node_modules/
+dist/
+ctrf/
+*.local
+.DS_Store
+server/scores.db

@@ -1,0 +1,10 @@
+{
+  "name": "packet-express-server",
+  "version": "0.1.0",
+  "description": "Leaderboard server for Packet Express",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  }
+}

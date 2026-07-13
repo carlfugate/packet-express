@@ -17,5 +17,6 @@ export default defineConfig({
     command: 'pnpm run preview',
     port: 4173,
     reuseExistingServer: true,
+    timeout: 30000,
   },
 });

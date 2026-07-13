@@ -1,6 +1,8 @@
 node_modules/
 dist/
 ctrf/
+test-results/
+vitest-ctrf/
 *.local
 .DS_Store
 server/scores.db

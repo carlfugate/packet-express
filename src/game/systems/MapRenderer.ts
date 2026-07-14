@@ -14,16 +14,52 @@ export class MapRenderer {
     for (const slot of MAP_DATA.towerSlots) {
       this.slotPositions.set(slot.id, { x: slot.x, y: slot.y });
     }
+
+    // Dark navy gradient background
+    this.drawBackground();
+  }
+
+  private drawBackground(): void {
+    const bg = this.scene.add.graphics();
+    bg.setDepth(-10);
+    // Navy gradient from top to bottom
+    const steps = 20;
+    const h = 720 / steps;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      // Interpolate from #0A1628 (top) to #061020 (bottom)
+      const r = Math.round(10 + t * (-4));
+      const g2 = Math.round(22 + t * (-6));
+      const b = Math.round(40 + t * (-8));
+      const color = (Math.max(0, r) << 16) | (Math.max(0, g2) << 8) | Math.max(0, b);
+      bg.fillStyle(color, 1);
+      bg.fillRect(0, i * h, 1280, h + 1);
+    }
+    // Subtle grid overlay
+    bg.lineStyle(1, 0x0076a8, 0.05);
+    for (let x = 0; x < 1280; x += 40) {
+      bg.beginPath();
+      bg.moveTo(x, 0);
+      bg.lineTo(x, 720);
+      bg.strokePath();
+    }
+    for (let y = 0; y < 720; y += 40) {
+      bg.beginPath();
+      bg.moveTo(0, y);
+      bg.lineTo(1280, y);
+      bg.strokePath();
+    }
   }
 
   drawTrack(waypoints: Array<{ x: number; y: number }>): void {
     const g = this.trackGraphics;
     g.clear();
+    g.setDepth(-5);
 
     if (waypoints.length < 2) return;
 
-    // Draw railroad ties (perpendicular marks along the path)
-    g.lineStyle(2, 0x4a4a4a, 0.6);
+    // Draw railroad ties (perpendicular cross-ties every 20px)
+    g.lineStyle(3, 0x3a3a3a, 0.8);
     for (let i = 0; i < waypoints.length - 1; i++) {
       const a = waypoints[i];
       const b = waypoints[i + 1];
@@ -34,8 +70,8 @@ export class MapRenderer {
       const nx = -dy / dist;
       const ny = dx / dist;
 
-      for (let s = 0; s < steps; s++) {
-        const t = s / steps;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / Math.max(steps, 1);
         const cx = a.x + dx * t;
         const cy = a.y + dy * t;
         g.beginPath();
@@ -45,9 +81,9 @@ export class MapRenderer {
       }
     }
 
-    // Draw main rails (two parallel lines)
+    // Draw dual rails (2 parallel dark gray lines)
     for (const offset of [-6, 6]) {
-      g.lineStyle(3, 0x666666, 1);
+      g.lineStyle(3, 0x555555, 1);
       g.beginPath();
       for (let i = 0; i < waypoints.length; i++) {
         let nx = 0;
@@ -76,13 +112,39 @@ export class MapRenderer {
       g.strokePath();
     }
 
-    // Data flow particles along path (green dots moving along track)
+    // Station labels
+    this.addStationLabels(waypoints);
+
+    // Data flow particles
     this.addDataFlowParticles(waypoints);
   }
 
+  private addStationLabels(waypoints: Array<{ x: number; y: number }>): void {
+    const spawn = waypoints[0];
+    const exit = waypoints[waypoints.length - 1];
+
+    // KC Station label at spawn
+    const kcLabel = this.scene.add.text(spawn.x + 10, spawn.y - 30, 'KC Station', {
+      fontSize: '12px',
+      color: '#84BD00',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    });
+    kcLabel.setDepth(0);
+
+    // CHI Terminal label at exit
+    const chiLabel = this.scene.add.text(exit.x - 80, exit.y - 30, 'CHI Terminal', {
+      fontSize: '12px',
+      color: '#F47F28',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    });
+    chiLabel.setDepth(0);
+  }
+
   private addDataFlowParticles(waypoints: Array<{ x: number; y: number }>): void {
-    for (let p = 0; p < 5; p++) {
-      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 3, 0x84bd00, 0.6);
+    for (let p = 0; p < 6; p++) {
+      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 2, 0x84bd00, 0.7);
       dot.setDepth(1);
 
       const path = new Phaser.Curves.Path(waypoints[0].x, waypoints[0].y);
@@ -94,12 +156,13 @@ export class MapRenderer {
       this.scene.tweens.add({
         targets: follower,
         t: 1,
-        duration: 12000,
+        duration: 14000,
         repeat: -1,
-        delay: p * 2400,
+        delay: p * 2300,
         onUpdate: () => {
           path.getPoint(follower.t, follower.vec);
           dot.setPosition(follower.vec.x, follower.vec.y);
+          dot.setAlpha(0.3 + Math.sin(follower.t * Math.PI * 6) * 0.4);
         },
       });
     }
@@ -108,22 +171,32 @@ export class MapRenderer {
   drawTowerSlots(slots: Array<{ x: number; y: number; id: string }>): void {
     const g = this.slotGraphics;
     g.clear();
+    g.setDepth(-2);
 
     const slotSize = 44;
     const half = slotSize / 2;
 
     for (const slot of slots) {
-      // Fill: dark navy (#044872)
+      // Glow effect (outer)
+      g.fillStyle(0x0093b2, 0.1);
+      g.fillRect(slot.x - half - 2, slot.y - half - 2, slotSize + 4, slotSize + 4);
+
+      // Fill: dark navy
       g.fillStyle(0x044872, 0.6);
       g.fillRect(slot.x - half, slot.y - half, slotSize, slotSize);
 
-      // Dashed border: light blue (#0093B2)
+      // Dashed border
       g.lineStyle(2, 0x0093b2, 0.8);
-      const dashLen = 6;
-      const gapLen = 4;
+      this.drawDashedRect(g, slot.x - half, slot.y - half, slotSize, slotSize, 6, 4);
 
-      // Draw dashed rectangle
-      this.drawDashedRect(g, slot.x - half, slot.y - half, slotSize, slotSize, dashLen, gapLen);
+      // Plus icon in center
+      g.lineStyle(2, 0x0093b2, 0.4);
+      g.beginPath();
+      g.moveTo(slot.x, slot.y - 8);
+      g.lineTo(slot.x, slot.y + 8);
+      g.moveTo(slot.x - 8, slot.y);
+      g.lineTo(slot.x + 8, slot.y);
+      g.strokePath();
     }
   }
 
@@ -182,7 +255,6 @@ export class MapRenderer {
   }
 
   clearHighlight(slotId: string): void {
-    // Redraw all slots to clear individual highlights
     this.drawTowerSlots(MAP_DATA.towerSlots);
   }
 }

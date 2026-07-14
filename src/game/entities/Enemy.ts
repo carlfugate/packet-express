@@ -128,17 +128,78 @@ export class Enemy extends Phaser.GameObjects.Container {
 
   private die(): void {
     this.isAlive = false;
+
+    const deathX = this.x;
+    const deathY = this.y;
+
+    if (this.isLegitimate) {
+      // False positive: red X mark that fades
+      this.createFalsePositiveEffect(deathX, deathY);
+    } else {
+      // Threat: burst particles
+      this.createDeathBurst(deathX, deathY);
+    }
+
+    // Scale down + fade over 300ms before destroying
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
-      scaleX: 0.5,
-      scaleY: 0.5,
-      duration: 200,
+      scaleX: 0.3,
+      scaleY: 0.3,
+      duration: 300,
+      ease: 'Quad.easeIn',
       onComplete: () => {
         this.emit('enemy-killed', this.config);
         this.destroy();
       },
     });
+  }
+
+  private createDeathBurst(x: number, y: number): void {
+    // 5 red particles expanding outward and fading
+    const particleCount = 5;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const particle = this.scene.add.circle(x, y, 3, 0xd9534f, 1);
+      particle.setDepth(10);
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * 25,
+        y: y + Math.sin(angle) * 25,
+        alpha: 0,
+        scale: 0.3,
+        duration: 400,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
+  private createFalsePositiveEffect(x: number, y: number): void {
+    // Large red X mark
+    const xMark = this.scene.add.graphics();
+    xMark.setDepth(10);
+    xMark.lineStyle(4, 0xd9534f, 1);
+    xMark.beginPath();
+    xMark.moveTo(x - 14, y - 14);
+    xMark.lineTo(x + 14, y + 14);
+    xMark.strokePath();
+    xMark.beginPath();
+    xMark.moveTo(x + 14, y - 14);
+    xMark.lineTo(x - 14, y + 14);
+    xMark.strokePath();
+
+    this.scene.tweens.add({
+      targets: xMark,
+      alpha: 0,
+      duration: 800,
+      delay: 200,
+      onComplete: () => xMark.destroy(),
+    });
+
+    // Screen edge flash (red)
+    this.scene.cameras.main.flash(150, 200, 50, 50, true);
   }
 
   private updateHealthBar(): void {

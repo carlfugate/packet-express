@@ -1,7 +1,16 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { TOWERS } from '../data/towers';
-import { calculateFinalScore } from '../logic/scoring';
+import { calculateFinalScore, calculateAccuracy } from '../logic/scoring';
+
+const TOWER_COLORS: Record<string, number> = {
+  firewall: 0x0076a8,
+  ids: 0x753bbd,
+  waf: 0xf47f28,
+  honeypot: 0xe7d747,
+  rate_limiter: 0x0093b2,
+  packet_inspector: 0x84bd00,
+};
 
 export class UIScene extends Phaser.Scene {
   private gameScene!: Phaser.Scene;
@@ -16,9 +25,18 @@ export class UIScene extends Phaser.Scene {
   // Tower selection panel
   private towerButtons: Phaser.GameObjects.Container[] = [];
   private selectedTowerId: string | null = null;
+  private tooltip: Phaser.GameObjects.Container | null = null;
 
-  // Kill feed position
-  private killFeedY: number = 100;
+  // Kill feed
+  private killFeedItems: Phaser.GameObjects.Text[] = [];
+  private readonly maxKillFeedItems = 5;
+
+  // Speed controls
+  private speedButtons: Phaser.GameObjects.Text[] = [];
+  private currentSpeed: number = 1;
+
+  // Pause indicator
+  private pauseOverlay: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: 'UI' });
@@ -29,6 +47,15 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset state
+    this.killFeedItems = [];
+    this.towerButtons = [];
+    this.speedButtons = [];
+    this.tooltip = null;
+    this.pauseOverlay = null;
+    this.currentSpeed = 1;
+    this.selectedTowerId = null;
+
     // === TOP BAR (HUD) ===
     const barBg = this.add.rectangle(640, 20, 1280, 40, 0x044872, 0.9);
     barBg.setOrigin(0.5, 0.5);
@@ -58,6 +85,9 @@ export class UIScene extends Phaser.Scene {
       color: '#5EA500',
       fontFamily: 'Arial',
     });
+
+    // === SPEED CONTROLS (top-right) ===
+    this.createSpeedControls();
 
     // === TOWER SELECTION BAR (bottom) ===
     this.createTowerBar();
@@ -98,36 +128,85 @@ export class UIScene extends Phaser.Scene {
     this.accuracyText.setColor(accuracyPct >= 90 ? '#5EA500' : accuracyPct >= 70 ? '#E7D747' : '#D9534F');
   }
 
+  private createSpeedControls(): void {
+    const speeds = [1, 2, 3];
+    const startX = 1140;
+    const y = 10;
+
+    const label = this.add.text(startX - 50, y, 'Speed:', {
+      fontSize: '14px',
+      color: '#B6B7B9',
+      fontFamily: 'Arial',
+    });
+
+    speeds.forEach((speed, index) => {
+      const x = startX + index * 40;
+      const btn = this.add.text(x, y, `${speed}x`, {
+        fontSize: '16px',
+        color: speed === 1 ? '#84BD00' : '#B6B7B9',
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+      }).setInteractive({ useHandCursor: true });
+
+      btn.on('pointerdown', () => {
+        this.currentSpeed = speed;
+        (this.gameScene as any).setGameSpeed(speed);
+        // Update button colors
+        this.speedButtons.forEach((b, i) => {
+          b.setColor(speeds[i] === speed ? '#84BD00' : '#B6B7B9');
+        });
+      });
+
+      this.speedButtons.push(btn);
+    });
+  }
+
   private createTowerBar(): void {
-    const barY = 680;
-    const startX = 200;
-    const spacing = 150;
+    const barY = 685;
+    const startX = 140;
+    const spacing = 170;
+
+    // Bar background
+    const barBg = this.add.rectangle(640, barY, 1280, 60, 0x044872, 0.9);
+    barBg.setOrigin(0.5, 0.5);
 
     TOWERS.forEach((config, index) => {
       const x = startX + index * spacing;
       const container = this.add.container(x, barY);
 
       // Background panel
-      const bg = this.add.rectangle(0, 0, 130, 50, 0x044872, 0.9);
+      const bg = this.add.rectangle(0, 0, 150, 50, 0x0a1628, 0.9);
       bg.setStrokeStyle(2, 0x0093b2);
       bg.setInteractive({ useHandCursor: true });
 
+      // Colored icon square
+      const iconColor = TOWER_COLORS[config.id] ?? 0xffffff;
+      const icon = this.add.rectangle(-58, 0, 14, 14, iconColor, 1);
+      icon.setStrokeStyle(1, 0xffffff, 0.3);
+
       // Tower name
       const nameText = this.add
-        .text(0, -12, config.name, { fontSize: '12px', color: '#FFFFFF', fontFamily: 'Arial' })
-        .setOrigin(0.5);
+        .text(-38, -10, config.name, { fontSize: '12px', color: '#FFFFFF', fontFamily: 'Arial' })
+        .setOrigin(0, 0.5);
       // Cost
       const costText = this.add
-        .text(0, 8, `${config.cost}c`, { fontSize: '11px', color: '#84BD00', fontFamily: 'Arial' })
-        .setOrigin(0.5);
+        .text(-38, 8, `${config.cost}c`, { fontSize: '11px', color: '#84BD00', fontFamily: 'Arial' })
+        .setOrigin(0, 0.5);
 
-      container.add([bg, nameText, costText]);
+      container.add([bg, icon, nameText, costText]);
+
+      // Hover: show tooltip
+      bg.on('pointerover', () => {
+        this.showTooltip(config, x, barY - 60);
+      });
+      bg.on('pointerout', () => {
+        this.hideTooltip();
+      });
 
       // Click handler: select tower type in BuildSystem
       bg.on('pointerdown', () => {
         this.selectedTowerId = config.id;
         this.gameScene.events.emit('tower-selected', config.id);
-        // Tell BuildSystem which tower is selected
         const buildSystem = (this.gameScene as any).buildSystem;
         if (buildSystem) {
           buildSystem.selectTowerType(config.id);
@@ -144,124 +223,302 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  // --- Event handlers for floating notifications ---
+  private showTooltip(config: typeof TOWERS[number], x: number, y: number): void {
+    this.hideTooltip();
+
+    const container = this.add.container(x, y);
+    const upgrade = config.upgrades[0];
+
+    const lines = [
+      config.name,
+      config.description,
+      `Damage: ${upgrade.damage} | Range: ${upgrade.range}`,
+      `Fire Rate: ${upgrade.fireRate}ms`,
+      config.canHitLegitimate ? 'Warning: Can hit legitimate traffic!' : 'Safe: Won\'t target legitimate traffic',
+    ];
+
+    const maxWidth = 220;
+    const padding = 8;
+    const lineHeight = 14;
+    const textHeight = lines.length * lineHeight + padding * 2;
+
+    const bg = this.add.rectangle(0, 0, maxWidth + padding * 2, textHeight, 0x0a1628, 0.95);
+    bg.setStrokeStyle(1, 0x0093b2);
+    bg.setOrigin(0.5, 1);
+    container.add(bg);
+
+    lines.forEach((line, i) => {
+      const color = i === 0 ? '#FFFFFF' : i === lines.length - 1 ? (config.canHitLegitimate ? '#D9534F' : '#5EA500') : '#B6B7B9';
+      const style = i === 0 ? 'bold' : 'normal';
+      const text = this.add.text(-maxWidth / 2, -textHeight + padding + i * lineHeight, line, {
+        fontSize: '11px',
+        color,
+        fontFamily: 'Arial',
+        fontStyle: style,
+        wordWrap: { width: maxWidth },
+      });
+      container.add(text);
+    });
+
+    this.tooltip = container;
+  }
+
+  private hideTooltip(): void {
+    if (this.tooltip) {
+      this.tooltip.destroy();
+      this.tooltip = null;
+    }
+  }
+
+  // --- Event handlers ---
   private onThreatKilled(data: { config: any; score: number }): void {
-    this.showFloatingText(`+${data.score}`, '#84BD00');
+    this.addKillFeedEntry(`+${data.score} ${data.config.name}`, '#84BD00');
   }
 
   private onFalsePositive(config: any): void {
-    this.showFloatingText(`FALSE POSITIVE! -${config.falsePositivePenalty || 200}`, '#D9534F');
+    this.addKillFeedEntry(`FALSE POSITIVE: ${config.name} -${config.falsePositivePenalty || 200}`, '#D9534F');
     this.cameras.main.flash(200, 200, 50, 50, true);
   }
 
   private onLegitDelivered(data: { config: any; bonus: number }): void {
-    this.showFloatingText(`Delivered +${data.bonus}`, '#5EA500');
+    this.addKillFeedEntry(`Delivered: ${data.config.name} +${data.bonus}`, '#5EA500');
   }
 
   private onThreatLeaked(_config: any): void {
-    this.showFloatingText('BREACH! -1 Bandwidth', '#F47F28');
+    this.addKillFeedEntry('BREACH! -1 Bandwidth', '#F47F28');
     this.cameras.main.shake(200, 0.005);
   }
 
+  private addKillFeedEntry(text: string, color: string): void {
+    const feedX = 1080;
+    const baseY = 60;
+
+    // Shift existing items down
+    this.killFeedItems.forEach((item) => {
+      item.y += 22;
+    });
+
+    // Remove items beyond limit
+    while (this.killFeedItems.length >= this.maxKillFeedItems) {
+      const oldest = this.killFeedItems.pop();
+      if (oldest) {
+        this.tweens.add({
+          targets: oldest,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => oldest.destroy(),
+        });
+      }
+    }
+
+    // Add new entry at top
+    const entry = this.add.text(feedX, baseY, text, {
+      fontSize: '13px',
+      color,
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    }).setOrigin(0, 0).setAlpha(0);
+
+    this.tweens.add({
+      targets: entry,
+      alpha: 1,
+      duration: 200,
+    });
+
+    // Auto-fade after 4 seconds
+    this.time.delayedCall(4000, () => {
+      if (entry.active) {
+        this.tweens.add({
+          targets: entry,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => {
+            const idx = this.killFeedItems.indexOf(entry);
+            if (idx >= 0) this.killFeedItems.splice(idx, 1);
+            entry.destroy();
+          },
+        });
+      }
+    });
+
+    this.killFeedItems.unshift(entry);
+  }
+
   private onWaveStart(data: { wave: number }): void {
-    const banner = this.add
-      .text(640, 360, `WAVE ${data.wave}`, {
-        fontSize: '48px',
+    // Get wave preview from WaveManager
+    const waveManager = (this.gameScene as any).waveManager;
+    const preview = waveManager?.getWavePreview ? waveManager.getWavePreview() : '';
+
+    // Large wave announcement
+    const banner = this.add.container(640, 320);
+
+    const title = this.add
+      .text(0, 0, `WAVE ${data.wave}`, {
+        fontSize: '56px',
         color: '#0076A8',
         fontFamily: 'Arial',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5)
-      .setAlpha(0);
+      .setOrigin(0.5);
+
+    banner.add(title);
+
+    // Preview text showing incoming enemies
+    if (preview) {
+      const previewText = this.add
+        .text(0, 40, preview, {
+          fontSize: '16px',
+          color: '#B6B7B9',
+          fontFamily: 'Arial',
+        })
+        .setOrigin(0.5);
+      banner.add(previewText);
+    }
+
+    banner.setAlpha(0);
+    banner.setScale(0.8);
 
     this.tweens.add({
       targets: banner,
-      alpha: { from: 0, to: 1 },
-      y: { from: 380, to: 360 },
-      duration: 500,
-      hold: 1000,
+      alpha: 1,
+      scale: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+      hold: 1500,
       yoyo: true,
       onComplete: () => banner.destroy(),
     });
   }
 
   private onWaveComplete(data: { wave: number; creditBonus: number; scoreBonus: number }): void {
-    this.showFloatingText(`Wave ${data.wave} Clear! +${data.creditBonus}c +${data.scoreBonus}pts`, '#0093B2');
+    this.addKillFeedEntry(`Wave ${data.wave} Clear! +${data.creditBonus}c +${data.scoreBonus}pts`, '#0093B2');
   }
 
   private onGameOver(data: { victory: boolean; scoreState: any }): void {
-    const finalScore = calculateFinalScore(data.scoreState);
+    const scoreState = data.scoreState;
+    const accuracy = calculateAccuracy(scoreState.threatsKilled, scoreState.falsePositives);
+    const finalScore = calculateFinalScore(scoreState);
+    const baseScore = scoreState.score;
+
+    let multiplierLabel: string;
+    if (accuracy >= 1.0) multiplierLabel = '1.5x';
+    else if (accuracy >= 0.9) multiplierLabel = '1.2x';
+    else if (accuracy >= 0.7) multiplierLabel = '1.0x';
+    else if (accuracy >= 0.5) multiplierLabel = '0.7x';
+    else multiplierLabel = '0.5x';
+
     const titleText = data.victory ? 'NETWORK SECURED' : 'NETWORK BREACHED';
     const titleColor = data.victory ? '#84BD00' : '#D9534F';
 
     // Dark overlay
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7);
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8);
 
-    // Results
+    // Title
     this.add
-      .text(640, 200, titleText, { fontSize: '48px', color: titleColor, fontFamily: 'Arial', fontStyle: 'bold' })
+      .text(640, 140, titleText, { fontSize: '52px', color: titleColor, fontFamily: 'Arial', fontStyle: 'bold' })
+      .setOrigin(0.5);
+
+    // Score calculation breakdown
+    this.add
+      .text(640, 210, `${baseScore} x ${multiplierLabel} = ${finalScore}`, {
+        fontSize: '28px', color: '#E7D747', fontFamily: 'Arial', fontStyle: 'bold',
+      })
       .setOrigin(0.5);
     this.add
-      .text(640, 280, `Final Score: ${finalScore}`, { fontSize: '32px', color: '#E7D747', fontFamily: 'Arial' })
+      .text(640, 240, 'Base Score x Accuracy Multiplier = Final Score', {
+        fontSize: '14px', color: '#B6B7B9', fontFamily: 'Arial',
+      })
+      .setOrigin(0.5);
+
+    // Accuracy bar
+    const barX = 480;
+    const barY = 280;
+    const barW = 320;
+    const barH = 20;
+    // Background
+    this.add.rectangle(barX + barW / 2, barY + barH / 2, barW, barH, 0x333333, 1).setOrigin(0.5);
+    // Fill (colored by accuracy)
+    const accColor = accuracy >= 0.9 ? 0x5ea500 : accuracy >= 0.7 ? 0xe7d747 : 0xd9534f;
+    const fillW = barW * accuracy;
+    this.add.rectangle(barX + fillW / 2, barY + barH / 2, fillW, barH, accColor, 1).setOrigin(0.5);
+    this.add
+      .text(640, barY + barH + 8, `Accuracy: ${Math.round(accuracy * 100)}%`, {
+        fontSize: '16px', color: '#FFFFFF', fontFamily: 'Arial',
+      })
+      .setOrigin(0.5);
+
+    // Stats
+    const statsY = 340;
+    this.add
+      .text(640, statsY, `Threats Killed: ${scoreState.threatsKilled}`, { fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial' })
       .setOrigin(0.5);
     this.add
-      .text(640, 330, `Threats Killed: ${data.scoreState.threatsKilled}`, { fontSize: '20px', color: '#FFFFFF', fontFamily: 'Arial' })
-      .setOrigin(0.5);
-    this.add
-      .text(640, 360, `False Positives: ${data.scoreState.falsePositives}`, {
-        fontSize: '20px',
-        color: data.scoreState.falsePositives > 0 ? '#D9534F' : '#5EA500',
+      .text(640, statsY + 30, `False Positives: ${scoreState.falsePositives}`, {
+        fontSize: '18px',
+        color: scoreState.falsePositives > 0 ? '#D9534F' : '#5EA500',
         fontFamily: 'Arial',
       })
       .setOrigin(0.5);
     this.add
-      .text(640, 390, `Accuracy: ${Math.round(data.scoreState.accuracy * 100)}%`, { fontSize: '20px', color: '#FFFFFF', fontFamily: 'Arial' })
+      .text(640, statsY + 60, `Threats Leaked: ${scoreState.threatsLeaked}`, { fontSize: '18px', color: '#F47F28', fontFamily: 'Arial' })
       .setOrigin(0.5);
     this.add
-      .text(640, 420, `Waves Completed: ${data.scoreState.currentWave}/20`, { fontSize: '20px', color: '#FFFFFF', fontFamily: 'Arial' })
+      .text(640, statsY + 90, `Legitimate Delivered: ${scoreState.legitimateDelivered}`, { fontSize: '18px', color: '#5EA500', fontFamily: 'Arial' })
+      .setOrigin(0.5);
+    this.add
+      .text(640, statsY + 120, `Waves Completed: ${scoreState.currentWave}/20`, { fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial' })
       .setOrigin(0.5);
 
-    // Play again button
-    const btn = this.add
-      .text(640, 520, 'PLAY AGAIN', { fontSize: '28px', color: '#0076A8', fontFamily: 'Arial', fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    btn.on('pointerdown', () => {
+    // Play Again button (large and obvious)
+    const btnY = 560;
+    const btnBg = this.add.rectangle(640, btnY, 240, 60, 0x0076a8, 1);
+    btnBg.setStrokeStyle(3, 0x48cae4);
+    btnBg.setInteractive({ useHandCursor: true });
+
+    const btnText = this.add
+      .text(640, btnY, 'PLAY AGAIN', { fontSize: '28px', color: '#FFFFFF', fontFamily: 'Arial', fontStyle: 'bold' })
+      .setOrigin(0.5);
+
+    btnBg.on('pointerover', () => {
+      btnBg.setFillStyle(0x0093b2);
+    });
+    btnBg.on('pointerout', () => {
+      btnBg.setFillStyle(0x0076a8);
+    });
+    btnBg.on('pointerdown', () => {
       this.scene.stop('UI');
       this.scene.stop('Game');
       this.scene.start('Game');
+    });
+
+    // Pulsing animation on button
+    this.tweens.add({
+      targets: [btnBg, btnText],
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
     });
   }
 
   private onPauseToggled(paused: boolean): void {
     if (paused) {
-      this.add
-        .text(640, 360, 'PAUSED', { fontSize: '48px', color: '#FFFFFF', fontFamily: 'Arial' })
-        .setOrigin(0.5)
-        .setName('pauseText');
+      this.pauseOverlay = this.add.container(640, 360);
+      const bg = this.add.rectangle(0, 0, 1280, 720, 0x000000, 0.5);
+      const text = this.add
+        .text(0, 0, 'PAUSED', { fontSize: '64px', color: '#FFFFFF', fontFamily: 'Arial', fontStyle: 'bold' })
+        .setOrigin(0.5);
+      const subtext = this.add
+        .text(0, 50, 'Press ESC to resume', { fontSize: '18px', color: '#B6B7B9', fontFamily: 'Arial' })
+        .setOrigin(0.5);
+      this.pauseOverlay.add([bg, text, subtext]);
     } else {
-      const pauseText = this.children.getByName('pauseText');
-      if (pauseText) pauseText.destroy();
+      if (this.pauseOverlay) {
+        this.pauseOverlay.destroy();
+        this.pauseOverlay = null;
+      }
     }
-  }
-
-  private showFloatingText(text: string, color: string): void {
-    const floater = this.add.text(1100, this.killFeedY, text, {
-      fontSize: '14px',
-      color,
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    this.tweens.add({
-      targets: floater,
-      y: floater.y - 30,
-      alpha: 0,
-      duration: 2000,
-      onComplete: () => floater.destroy(),
-    });
-
-    this.killFeedY += 20;
-    if (this.killFeedY > 400) this.killFeedY = 100;
   }
 }

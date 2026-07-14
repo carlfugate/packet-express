@@ -125,6 +125,16 @@ export class Tower extends Phaser.GameObjects.Container {
   private fireAt(target: Enemy): void {
     this.emit('tower-fired', this, target);
 
+    // Muzzle flash animation: scale pulse
+    this.scene.tweens.add({
+      targets: this.sprite,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 50,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+    });
+
     let damage = this.getDamage();
     damage = calculateBonusDamage(damage, target.config.id, this.config.bonusVs);
 

@@ -89,11 +89,32 @@ describe('combat logic', () => {
       expect(result).toBe(0); // index 2 is legitimate, skipped
     });
 
-    it('can target legitimate enemies when canHitLegitimate is true', () => {
+    it('can target legitimate enemies when canHitLegitimate is true and no threats in range', () => {
       const closeEnemies = [
         { position: { x: 5, y: 5 }, distanceOnPath: 100, isLegitimate: true, health: 50 },
       ];
       const result = selectTarget(towerPos, range, closeEnemies, 'closest', true);
+      expect(result).toBe(0);
+    });
+
+    it('prefers threats over legitimate when canHitLegitimate is true and both in range', () => {
+      const mixedEnemies = [
+        { position: { x: 5, y: 5 }, distanceOnPath: 200, isLegitimate: true, health: 50 },
+        { position: { x: 8, y: 8 }, distanceOnPath: 100, isLegitimate: false, health: 100 },
+      ];
+      // Even though legit enemy is further on path (would be 'first' target),
+      // threats are preferred when both types are in range
+      const result = selectTarget(towerPos, range, mixedEnemies, 'first', true);
+      expect(result).toBe(1); // picks threat, not legit
+    });
+
+    it('only targets legitimate when no threats remain in range', () => {
+      const legitOnly = [
+        { position: { x: 5, y: 5 }, distanceOnPath: 200, isLegitimate: true, health: 50 },
+        { position: { x: 8, y: 8 }, distanceOnPath: 100, isLegitimate: true, health: 30 },
+      ];
+      const result = selectTarget(towerPos, range, legitOnly, 'first', true);
+      // No threats available, so it will target the legitimate enemy furthest on path
       expect(result).toBe(0);
     });
 

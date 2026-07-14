@@ -27,6 +27,10 @@ export class UIScene extends Phaser.Scene {
   private selectedTowerId: string | null = null;
   private tooltip: Phaser.GameObjects.Container | null = null;
 
+  // Tower action panel (for placed towers)
+  private towerActionPanel: Phaser.GameObjects.Container | null = null;
+  private selectedPlacedTower: any | null = null;
+
   // Kill feed
   private killFeedItems: Phaser.GameObjects.Text[] = [];
   private readonly maxKillFeedItems = 5;
@@ -55,6 +59,8 @@ export class UIScene extends Phaser.Scene {
     this.pauseOverlay = null;
     this.currentSpeed = 1;
     this.selectedTowerId = null;
+    this.towerActionPanel = null;
+    this.selectedPlacedTower = null;
 
     // === TOP BAR (HUD) ===
     const barBg = this.add.rectangle(640, 20, 1280, 40, 0x044872, 0.9);
@@ -101,6 +107,8 @@ export class UIScene extends Phaser.Scene {
     this.gameScene.events.on('wave-start', this.onWaveStart, this);
     this.gameScene.events.on('game-over', this.onGameOver, this);
     this.gameScene.events.on('pause-toggled', this.onPauseToggled, this);
+    this.gameScene.events.on('placed-tower-selected', this.onPlacedTowerSelected, this);
+    this.gameScene.events.on('placed-tower-deselected', this.onPlacedTowerDeselected, this);
 
     // Cleanup on shutdown
     this.events.on('shutdown', () => {
@@ -112,6 +120,8 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.off('wave-start', this.onWaveStart, this);
       this.gameScene.events.off('game-over', this.onGameOver, this);
       this.gameScene.events.off('pause-toggled', this.onPauseToggled, this);
+      this.gameScene.events.off('placed-tower-selected', this.onPlacedTowerSelected, this);
+      this.gameScene.events.off('placed-tower-deselected', this.onPlacedTowerDeselected, this);
     });
   }
 
@@ -545,6 +555,114 @@ export class UIScene extends Phaser.Scene {
         this.pauseOverlay.destroy();
         this.pauseOverlay = null;
       }
+    }
+  }
+
+  private onPlacedTowerSelected(data: {
+    tower: any;
+    slotId: string;
+    config: any;
+    level: number;
+    x: number;
+    y: number;
+  }): void {
+    this.dismissTowerActionPanel();
+    this.selectedPlacedTower = data;
+
+    // Show range circle on the tower
+    data.tower.showRange();
+
+    // Position panel near tower but offset so it doesn't cover it
+    const panelX = data.x + 60 > 1180 ? data.x - 160 : data.x + 60;
+    const panelY = data.y - 60 < 0 ? data.y + 20 : data.y - 60;
+
+    this.towerActionPanel = this.add.container(panelX, panelY);
+
+    // Panel background
+    const panelBg = this.add.rectangle(100, 60, 200, 120, 0x044872, 0.95);
+    panelBg.setStrokeStyle(2, 0x0093b2);
+    panelBg.setOrigin(0.5, 0.5);
+
+    // Title: tower name + level
+    const title = this.add.text(100, 18, `${data.config.name} Lv.${data.level}`, {
+      fontSize: '14px',
+      color: '#FFFFFF',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0.5);
+
+    // Upgrade button
+    const gameState = (this.gameScene as any).getGameState() as Record<string, any>;
+    const credits = gameState.credits;
+    const buildSystem = (this.gameScene as any).buildSystem;
+    const canUpgrade = buildSystem.canUpgrade(data.slotId, credits);
+    const isMaxLevel = data.level >= data.config.upgrades.length;
+
+    let upgradeCostText = 'MAX';
+    if (!isMaxLevel) {
+      const upgradeCost = Math.round(data.config.cost * [1, 1.5, 2.5][data.level]);
+      upgradeCostText = `${upgradeCost}c`;
+    }
+
+    const upgBg = this.add.rectangle(100, 50, 180, 28, 0x0a1628, 0.9);
+    upgBg.setStrokeStyle(1, canUpgrade ? 0x84bd00 : 0x484848);
+    upgBg.setOrigin(0.5, 0.5);
+    if (canUpgrade) {
+      upgBg.setInteractive({ useHandCursor: true });
+    }
+
+    const upgText = this.add.text(100, 50, `Upgrade ${upgradeCostText}`, {
+      fontSize: '12px',
+      color: canUpgrade ? '#84BD00' : '#7A7B7C',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0.5);
+
+    if (canUpgrade) {
+      upgBg.on('pointerdown', () => {
+        (this.gameScene as any).upgradeTower(data.slotId);
+        this.dismissTowerActionPanel();
+      });
+      upgBg.on('pointerover', () => upgBg.setFillStyle(0x1a2a3a));
+      upgBg.on('pointerout', () => upgBg.setFillStyle(0x0a1628));
+    }
+
+    // Sell button
+    const sellPrice = data.tower.getSellPrice();
+    const sellBg = this.add.rectangle(100, 84, 180, 28, 0x0a1628, 0.9);
+    sellBg.setStrokeStyle(1, 0xf47f28);
+    sellBg.setOrigin(0.5, 0.5);
+    sellBg.setInteractive({ useHandCursor: true });
+
+    const sellText = this.add.text(100, 84, `Sell +${sellPrice}c`, {
+      fontSize: '12px',
+      color: '#F47F28',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0.5);
+
+    sellBg.on('pointerdown', () => {
+      (this.gameScene as any).sellTower(data.slotId);
+      this.dismissTowerActionPanel();
+    });
+    sellBg.on('pointerover', () => sellBg.setFillStyle(0x1a2a3a));
+    sellBg.on('pointerout', () => sellBg.setFillStyle(0x0a1628));
+
+    this.towerActionPanel.add([panelBg, title, upgBg, upgText, sellBg, sellText]);
+  }
+
+  private onPlacedTowerDeselected(): void {
+    this.dismissTowerActionPanel();
+  }
+
+  private dismissTowerActionPanel(): void {
+    if (this.selectedPlacedTower) {
+      this.selectedPlacedTower.tower.hideRange();
+      this.selectedPlacedTower = null;
+    }
+    if (this.towerActionPanel) {
+      this.towerActionPanel.destroy();
+      this.towerActionPanel = null;
     }
   }
 }

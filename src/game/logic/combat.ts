@@ -26,21 +26,31 @@ export function selectTarget(
 
   if (candidates.length === 0) return null;
 
+  // When canHitLegitimate is true, prefer threats over legitimate traffic.
+  // Only target legitimate if no threats are in range.
+  let pool = candidates;
+  if (canHitLegitimate) {
+    const threats = candidates.filter(({ enemy }) => !enemy.isLegitimate);
+    if (threats.length > 0) {
+      pool = threats;
+    }
+  }
+
   switch (targetingMode) {
     case 'first':
     case 'area': {
-      let best = candidates[0];
-      for (let i = 1; i < candidates.length; i++) {
-        if (candidates[i].enemy.distanceOnPath > best.enemy.distanceOnPath) {
-          best = candidates[i];
+      let best = pool[0];
+      for (let i = 1; i < pool.length; i++) {
+        if (pool[i].enemy.distanceOnPath > best.enemy.distanceOnPath) {
+          best = pool[i];
         }
       }
       return best.index;
     }
     case 'closest': {
-      let best = candidates[0];
+      let best = pool[0];
       let bestDist = Infinity;
-      for (const candidate of candidates) {
+      for (const candidate of pool) {
         const dx = towerPos.x - candidate.enemy.position.x;
         const dy = towerPos.y - candidate.enemy.position.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -52,10 +62,10 @@ export function selectTarget(
       return best.index;
     }
     case 'strongest': {
-      let best = candidates[0];
-      for (let i = 1; i < candidates.length; i++) {
-        if (candidates[i].enemy.health > best.enemy.health) {
-          best = candidates[i];
+      let best = pool[0];
+      for (let i = 1; i < pool.length; i++) {
+        if (pool[i].enemy.health > best.enemy.health) {
+          best = pool[i];
         }
       }
       return best.index;

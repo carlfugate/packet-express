@@ -229,6 +229,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    // Check if clicking on an existing tower first
+    const clickedTower = this.towers.find((t) => {
+      const dx = Math.abs(pointer.worldX - t.x);
+      const dy = Math.abs(pointer.worldY - t.y);
+      return dx < 24 && dy < 24;
+    });
+
+    if (clickedTower) {
+      const slotInfo = this.buildSystem.getSlotInfo(clickedTower.slotId);
+      if (slotInfo) {
+        const config = this.buildSystem.getTowerConfig(slotInfo.towerId);
+        if (config) {
+          this.events.emit('placed-tower-selected', {
+            tower: clickedTower,
+            slotId: clickedTower.slotId,
+            config,
+            level: slotInfo.level,
+            x: clickedTower.x,
+            y: clickedTower.y,
+          });
+          return;
+        }
+      }
+    }
+
     const slot = MAP_DATA.towerSlots.find((s) => {
       const dx = Math.abs(pointer.worldX - s.x);
       const dy = Math.abs(pointer.worldY - s.y);
@@ -241,12 +266,41 @@ export class GameScene extends Phaser.Scene {
       if (this.buildSystem.canPlaceAt(slot.id, this.credits)) {
         this.buildSystem.placeAt(slot.id);
       }
+    } else {
+      // Clicking elsewhere dismisses the tower action panel
+      this.events.emit('placed-tower-deselected');
     }
   }
 
   private togglePause(): void {
     this.paused = !this.paused;
     this.events.emit('pause-toggled', this.paused);
+  }
+
+  sellTower(slotId: string): void {
+    const result = this.buildSystem.sell(slotId);
+    if (result) {
+      this.credits += result.refund;
+      // Remove the tower entity
+      const towerIndex = this.towers.findIndex((t) => t.slotId === slotId);
+      if (towerIndex >= 0) {
+        const tower = this.towers[towerIndex];
+        tower.destroy();
+        this.towers.splice(towerIndex, 1);
+      }
+    }
+  }
+
+  upgradeTower(slotId: string): void {
+    const result = this.buildSystem.upgrade(slotId);
+    if (result) {
+      this.credits -= result.cost;
+      // Upgrade the tower entity
+      const tower = this.towers.find((t) => t.slotId === slotId);
+      if (tower) {
+        tower.upgrade();
+      }
+    }
   }
 
   private openHelp(): void {

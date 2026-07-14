@@ -87,6 +87,10 @@ export class GameScene extends Phaser.Scene {
     // Keyboard shortcuts
     this.input.keyboard?.on('keydown-SPACE', () => this.waveManager.startWave());
     this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
+    this.input.keyboard?.on('keydown-H', () => this.openHelp());
+    this.input.keyboard?.on('keydown-ONE', () => this.setGameSpeed(1));
+    this.input.keyboard?.on('keydown-TWO', () => this.setGameSpeed(2));
+    this.input.keyboard?.on('keydown-THREE', () => this.setGameSpeed(3));
 
     // Expose for E2E testing
     (window as unknown as Record<string, unknown>).__GAME_STATE__ = this.getGameState();
@@ -243,6 +247,24 @@ export class GameScene extends Phaser.Scene {
   private togglePause(): void {
     this.paused = !this.paused;
     this.events.emit('pause-toggled', this.paused);
+  }
+
+  private openHelp(): void {
+    const wasPaused = this.paused;
+    if (!wasPaused) {
+      this.pauseForHelp();
+    }
+    this.scene.launch('Help', { returnTo: 'Game', gamePaused: wasPaused });
+  }
+
+  pauseForHelp(): void {
+    this.paused = true;
+    this.events.emit('pause-toggled', true);
+  }
+
+  resumeFromHelp(): void {
+    this.paused = false;
+    this.events.emit('pause-toggled', false);
   }
 
   setGameSpeed(speed: number): void {

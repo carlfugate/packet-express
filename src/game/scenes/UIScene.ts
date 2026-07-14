@@ -130,8 +130,21 @@ export class UIScene extends Phaser.Scene {
 
   private createSpeedControls(): void {
     const speeds = [1, 2, 3];
-    const startX = 1140;
+    const startX = 1100;
     const y = 10;
+
+    // Help button (? icon)
+    const helpBtn = this.add.text(startX - 90, y, '?', {
+      fontSize: '20px',
+      color: '#0093B2',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      backgroundColor: '#0a1628',
+      padding: { left: 6, right: 6, top: 1, bottom: 1 },
+    }).setInteractive({ useHandCursor: true });
+    helpBtn.on('pointerdown', () => this.openHelp());
+    helpBtn.on('pointerover', () => helpBtn.setColor('#FFFFFF'));
+    helpBtn.on('pointerout', () => helpBtn.setColor('#0093B2'));
 
     const label = this.add.text(startX - 50, y, 'Speed:', {
       fontSize: '14px',
@@ -159,6 +172,16 @@ export class UIScene extends Phaser.Scene {
 
       this.speedButtons.push(btn);
     });
+  }
+
+  private openHelp(): void {
+    // Pause the game and show help
+    const gameScene = this.gameScene as any;
+    const wasPaused = gameScene.paused ?? false;
+    if (!wasPaused) {
+      gameScene.pauseForHelp();
+    }
+    this.scene.launch('Help', { returnTo: 'Game', gamePaused: wasPaused });
   }
 
   private createTowerBar(): void {

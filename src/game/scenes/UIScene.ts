@@ -185,20 +185,23 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createTowerBar(): void {
-    const barY = 685;
-    const startX = 140;
-    const spacing = 170;
+    const barY = 692;
+    const startX = 120;
+    const spacing = 180;
 
-    // Bar background
-    const barBg = this.add.rectangle(640, barY, 1280, 60, 0x044872, 0.9);
+    // Solid opaque background bar — sits below the playable area
+    const barBg = this.add.rectangle(640, barY, 1280, 56, 0x0a1628, 1);
     barBg.setOrigin(0.5, 0.5);
+    // Top border to visually separate from game area
+    const barBorder = this.add.rectangle(640, barY - 28, 1280, 2, 0x044872, 1);
+    barBorder.setOrigin(0.5, 0.5);
 
     TOWERS.forEach((config, index) => {
       const x = startX + index * spacing;
       const container = this.add.container(x, barY);
 
       // Background panel
-      const bg = this.add.rectangle(0, 0, 150, 50, 0x0a1628, 0.9);
+      const bg = this.add.rectangle(0, 0, 160, 44, 0x044872, 0.9);
       bg.setStrokeStyle(2, 0x0093b2);
       bg.setInteractive({ useHandCursor: true });
 

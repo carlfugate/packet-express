@@ -123,7 +123,7 @@ export class MapRenderer {
     const spawn = waypoints[0];
     const exit = waypoints[waypoints.length - 1];
 
-    // KC Station label at spawn
+    // KC Station label at spawn (top-left)
     const kcLabel = this.scene.add.text(spawn.x + 10, spawn.y - 30, 'KC Station', {
       fontSize: '12px',
       color: '#84BD00',
@@ -132,8 +132,8 @@ export class MapRenderer {
     });
     kcLabel.setDepth(0);
 
-    // CHI Terminal label at exit
-    const chiLabel = this.scene.add.text(exit.x - 80, exit.y - 30, 'CHI Terminal', {
+    // CHI Terminal label at exit (bottom-left)
+    const chiLabel = this.scene.add.text(exit.x + 10, exit.y - 30, 'CHI Terminal', {
       fontSize: '12px',
       color: '#F47F28',
       fontFamily: 'Arial',

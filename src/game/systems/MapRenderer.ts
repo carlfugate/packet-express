@@ -58,58 +58,71 @@ export class MapRenderer {
 
     if (waypoints.length < 2) return;
 
-    // Draw railroad ties (perpendicular cross-ties every 20px)
-    g.lineStyle(3, 0x3a3a3a, 0.8);
+    // Step 1: Draw the rail bed (thick outer line)
+    g.lineStyle(22, 0x3a3a3a, 1);
+    g.beginPath();
+    g.moveTo(waypoints[0].x, waypoints[0].y);
+    for (let i = 1; i < waypoints.length; i++) {
+      g.lineTo(waypoints[i].x, waypoints[i].y);
+    }
+    g.strokePath();
+
+    // Step 2: Draw the dark center (creates the appearance of dual rails)
+    g.lineStyle(14, 0x0a1628, 1);
+    g.beginPath();
+    g.moveTo(waypoints[0].x, waypoints[0].y);
+    for (let i = 1; i < waypoints.length; i++) {
+      g.lineTo(waypoints[i].x, waypoints[i].y);
+    }
+    g.strokePath();
+
+    // Step 3: Draw cross-ties on straight segments only, with margin to avoid corner overlap
+    g.lineStyle(3, 0x555555, 0.9);
     for (let i = 0; i < waypoints.length - 1; i++) {
       const a = waypoints[i];
       const b = waypoints[i + 1];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const steps = Math.floor(dist / 20);
+
+      // Determine normal (perpendicular)
       const nx = -dy / dist;
       const ny = dx / dist;
 
-      for (let s = 0; s <= steps; s++) {
-        const t = s / Math.max(steps, 1);
+      // Draw ties every 25px, but skip the first and last 15px to avoid corner overlap
+      const margin = 15;
+      const tieSpacing = 25;
+
+      let d = margin;
+      while (d < dist - margin) {
+        const t = d / dist;
         const cx = a.x + dx * t;
         const cy = a.y + dy * t;
         g.beginPath();
-        g.moveTo(cx + nx * 10, cy + ny * 10);
-        g.lineTo(cx - nx * 10, cy - ny * 10);
+        g.moveTo(cx + nx * 11, cy + ny * 11);
+        g.lineTo(cx - nx * 11, cy - ny * 11);
         g.strokePath();
+        d += tieSpacing;
       }
     }
 
-    // Draw dual rails (2 parallel dark gray lines)
-    for (const offset of [-6, 6]) {
-      g.lineStyle(3, 0x555555, 1);
-      g.beginPath();
-      for (let i = 0; i < waypoints.length; i++) {
-        let nx = 0;
-        let ny = 0;
-        if (i < waypoints.length - 1) {
-          const dx = waypoints[i + 1].x - waypoints[i].x;
-          const dy = waypoints[i + 1].y - waypoints[i].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          nx = -dy / dist;
-          ny = dx / dist;
-        } else if (i > 0) {
-          const dx = waypoints[i].x - waypoints[i - 1].x;
-          const dy = waypoints[i].y - waypoints[i - 1].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          nx = -dy / dist;
-          ny = dx / dist;
-        }
-        const px = waypoints[i].x + nx * offset;
-        const py = waypoints[i].y + ny * offset;
-        if (i === 0) {
-          g.moveTo(px, py);
-        } else {
-          g.lineTo(px, py);
-        }
+    // Step 4: Draw thin rail lines on top of ties for detail (per-segment, not continuous)
+    for (const offset of [-8, 8]) {
+      g.lineStyle(2, 0x666666, 1);
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const a = waypoints[i];
+        const b = waypoints[i + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const nx = -dy / dist;
+        const ny = dx / dist;
+
+        g.beginPath();
+        g.moveTo(a.x + nx * offset, a.y + ny * offset);
+        g.lineTo(b.x + nx * offset, b.y + ny * offset);
+        g.strokePath();
       }
-      g.strokePath();
     }
 
     // Station labels

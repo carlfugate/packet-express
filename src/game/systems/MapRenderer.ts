@@ -58,6 +58,35 @@ export class MapRenderer {
 
     if (waypoints.length < 2) return;
 
+    // OT Zone: Semi-transparent orange overlay covering the bottom half (OT zone)
+    g.fillStyle(0xf47f28, 0.04);
+    g.fillRect(0, 310, 1280, 330);
+
+    // Hazard stripe at boundary (y=310) — alternating yellow/black diagonal lines
+    const stripeY = 310;
+    const stripeHeight = 8;
+    const stripeWidth = 16;
+    for (let x = 0; x < 1280; x += stripeWidth * 2) {
+      // Yellow stripe
+      g.fillStyle(0xe7d747, 0.8);
+      g.beginPath();
+      g.moveTo(x, stripeY);
+      g.lineTo(x + stripeWidth, stripeY);
+      g.lineTo(x + stripeWidth + stripeHeight, stripeY + stripeHeight);
+      g.lineTo(x + stripeHeight, stripeY + stripeHeight);
+      g.closePath();
+      g.fillPath();
+      // Black stripe
+      g.fillStyle(0x000000, 0.8);
+      g.beginPath();
+      g.moveTo(x + stripeWidth, stripeY);
+      g.lineTo(x + stripeWidth * 2, stripeY);
+      g.lineTo(x + stripeWidth * 2 + stripeHeight, stripeY + stripeHeight);
+      g.lineTo(x + stripeWidth + stripeHeight, stripeY + stripeHeight);
+      g.closePath();
+      g.fillPath();
+    }
+
     // Step 1: Draw the rail bed (thick outer line)
     g.lineStyle(22, 0x3a3a3a, 1);
     g.beginPath();
@@ -125,11 +154,36 @@ export class MapRenderer {
       }
     }
 
+    // Zone labels
+    this.addZoneLabels();
+
     // Station labels
     this.addStationLabels(waypoints);
 
     // Data flow particles
     this.addDataFlowParticles(waypoints);
+  }
+
+  private addZoneLabels(): void {
+    // IT ZONE label near the top
+    const itLabel = this.scene.add.text(600, 65, 'IT ZONE', {
+      fontSize: '14px',
+      color: '#0093B2',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    });
+    itLabel.setDepth(0);
+    itLabel.setAlpha(0.7);
+
+    // OT ZONE label near the boundary
+    const otLabel = this.scene.add.text(590, 325, 'OT ZONE', {
+      fontSize: '14px',
+      color: '#F47F28',
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+    });
+    otLabel.setDepth(0);
+    otLabel.setAlpha(0.7);
   }
 
   private addStationLabels(waypoints: Array<{ x: number; y: number }>): void {

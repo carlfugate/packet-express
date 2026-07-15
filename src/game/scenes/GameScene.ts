@@ -190,10 +190,11 @@ export class GameScene extends Phaser.Scene {
       this.scoreState.score += bonus;
       this.events.emit('legit-delivered', { config, bonus });
     } else {
-      // Threat got through
-      this.bandwidth--;
+      // OT damage: use otDamage if defined, otherwise default to 1
+      const damage = config.otDamage || 1;
+      this.bandwidth -= damage;
       this.scoreState.threatsLeaked++;
-      this.events.emit('threat-leaked', config);
+      this.events.emit('threat-leaked', { config, damage });
       if (this.bandwidth <= 0) {
         this.endGame(false);
       }

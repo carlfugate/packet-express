@@ -81,4 +81,30 @@ export const TOWERS: TowerConfig[] = [
       { level: 3, damage: 80, range: 180, fireRate: 1000, description: 'TLS interception + certificate validation' },
     ],
   },
+  {
+    id: 'data_diode',
+    name: 'Data Diode',
+    description: 'One-way network gateway. Allows whitelisted OT traffic through, blocks everything else entering the OT zone.',
+    cost: 300,
+    targetingMode: 'first',
+    canHitLegitimate: false,
+    upgrades: [
+      { level: 1, damage: 25, range: 100, fireRate: 900, description: 'Basic unidirectional gateway' },
+      { level: 2, damage: 45, range: 120, fireRate: 750, description: 'Protocol-aware filtering' },
+      { level: 3, damage: 70, range: 140, fireRate: 600, description: 'Full DPI with allowlist enforcement' },
+    ],
+  },
+  {
+    id: 'network_segmentation',
+    name: 'Segmentation',
+    description: 'IT/OT boundary enforcement. Slows all traffic crossing zones for inspection. The #1 OT defense.',
+    cost: 175,
+    targetingMode: 'area',
+    canHitLegitimate: false,
+    upgrades: [
+      { level: 1, damage: 10, range: 160, fireRate: 1200, slowFactor: 0.6, description: 'VLAN separation' },
+      { level: 2, damage: 20, range: 180, fireRate: 1000, slowFactor: 0.4, description: 'DMZ with jump host' },
+      { level: 3, damage: 35, range: 200, fireRate: 800, slowFactor: 0.25, description: 'Purdue Model Level 3.5 enforcement' },
+    ],
+  },
 ];

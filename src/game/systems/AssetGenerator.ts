@@ -240,6 +240,80 @@ export class AssetGenerator {
       g.lineTo(21, 22);
       g.strokePath();
     });
+
+    // Data Diode: Dark green arrow pointing one direction (one-way)
+    this.createTexture(scene, 'tower_data_diode', w, h, (g) => {
+      // Body rectangle
+      g.fillStyle(0x1b5e20, 1);
+      g.fillRect(6, 12, 28, 24);
+      g.lineStyle(2, 0x4caf50, 1);
+      g.strokeRect(6, 12, 28, 24);
+      // Arrow pointing right (one-way)
+      g.fillStyle(0x84bd00, 1);
+      g.beginPath();
+      g.moveTo(12, 20);
+      g.lineTo(26, 20);
+      g.lineTo(26, 16);
+      g.lineTo(34, 24);
+      g.lineTo(26, 32);
+      g.lineTo(26, 28);
+      g.lineTo(12, 28);
+      g.closePath();
+      g.fillPath();
+      // Blocked arrow (left side, red X)
+      g.lineStyle(2, 0xd9534f, 0.7);
+      g.beginPath();
+      g.moveTo(8, 38);
+      g.lineTo(14, 44);
+      g.moveTo(14, 38);
+      g.lineTo(8, 44);
+      g.strokePath();
+    });
+
+    // Network Segmentation: Split rectangle with divider line (boundary)
+    this.createTexture(scene, 'tower_network_segmentation', w, h, (g) => {
+      // Left half (IT side - blue)
+      g.fillStyle(0x0076a8, 0.8);
+      g.fillRect(4, 8, 15, 32);
+      g.lineStyle(1, 0x48cae4, 1);
+      g.strokeRect(4, 8, 15, 32);
+      // Right half (OT side - orange)
+      g.fillStyle(0xf47f28, 0.8);
+      g.fillRect(21, 8, 15, 32);
+      g.lineStyle(1, 0xffb74d, 1);
+      g.strokeRect(21, 8, 15, 32);
+      // Divider line (thick, hazard-style)
+      g.lineStyle(3, 0xe7d747, 1);
+      g.beginPath();
+      g.moveTo(20, 6);
+      g.lineTo(20, 42);
+      g.strokePath();
+      // Dashes on divider
+      g.lineStyle(2, 0x000000, 0.6);
+      g.beginPath();
+      g.moveTo(20, 10);
+      g.lineTo(20, 14);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(20, 20);
+      g.lineTo(20, 24);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(20, 30);
+      g.lineTo(20, 34);
+      g.strokePath();
+      // IT label
+      g.lineStyle(1, 0xffffff, 0.6);
+      g.beginPath();
+      g.moveTo(9, 20);
+      g.lineTo(9, 28);
+      g.strokePath();
+      // OT label
+      g.beginPath();
+      g.moveTo(28, 20);
+      g.lineTo(28, 28);
+      g.strokePath();
+    });
   }
 
   private static generateEnemyTextures(scene: Phaser.Scene): void {
@@ -371,6 +445,180 @@ export class AssetGenerator {
       g.fillCircle(12, 17, 1.5);
     });
 
+    // === OT THREATS (industrial, dark colors) ===
+
+    // Modbus Exploit: Dark orange gear shape
+    this.createTexture(scene, 'enemy_modbus_exploit', size, size, (g) => {
+      g.fillStyle(0xcc5500, 1);
+      const cx = 12;
+      const cy = 12;
+      const teeth = 8;
+      const outerR = 11;
+      const innerR = 7;
+      g.beginPath();
+      for (let i = 0; i < teeth * 2; i++) {
+        const angle = (Math.PI * i) / teeth;
+        const r = i % 2 === 0 ? outerR : innerR;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(1, 0xff8800, 1);
+      g.strokePath();
+      // Center hole
+      g.fillStyle(0x0a1628, 1);
+      g.fillCircle(cx, cy, 3);
+    });
+
+    // Firmware Worm: Purple worm/snake shape
+    this.createTexture(scene, 'enemy_firmware_worm', size, size, (g) => {
+      // Worm body segments (connected arcs)
+      g.lineStyle(4, 0x753bbd, 1);
+      g.beginPath();
+      g.arc(8, 12, 4, Math.PI, 0, false);
+      g.strokePath();
+      g.beginPath();
+      g.arc(16, 12, 4, 0, Math.PI, false);
+      g.strokePath();
+      // Connecting line
+      g.lineStyle(4, 0x753bbd, 1);
+      g.beginPath();
+      g.moveTo(4, 12);
+      g.lineTo(4, 12);
+      g.strokePath();
+      // Head
+      g.fillStyle(0x9b59b6, 1);
+      g.fillCircle(20, 12, 3);
+      g.lineStyle(1, 0xce93d8, 1);
+      g.strokeCircle(20, 12, 3);
+    });
+
+    // Signal Jammer: Yellow lightning bolt / radio waves
+    this.createTexture(scene, 'enemy_signal_jammer', size, size, (g) => {
+      // Radio wave arcs
+      g.lineStyle(2, 0xe7d747, 0.6);
+      g.beginPath();
+      g.arc(12, 12, 10, -0.7, 0.7, false);
+      g.strokePath();
+      g.beginPath();
+      g.arc(12, 12, 7, -0.5, 0.5, false);
+      g.strokePath();
+      // Lightning bolt center
+      g.fillStyle(0xe7d747, 1);
+      g.beginPath();
+      g.moveTo(14, 4);
+      g.lineTo(9, 13);
+      g.lineTo(13, 13);
+      g.lineTo(10, 20);
+      g.lineTo(16, 11);
+      g.lineTo(12, 11);
+      g.lineTo(14, 4);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // === OT LEGITIMATE TRAFFIC (industrial, amber/gold colors) ===
+
+    // PLC Heartbeat: Amber pulse/heart shape
+    this.createTexture(scene, 'enemy_plc_heartbeat', size, size, (g) => {
+      g.fillStyle(0xd4920a, 1);
+      // Heart shape
+      g.beginPath();
+      g.moveTo(12, 18);
+      g.lineTo(5, 11);
+      g.arc(8, 8, 4, Math.PI * 0.75, 0, true);
+      g.arc(16, 8, 4, Math.PI, Math.PI * 0.25, true);
+      g.lineTo(12, 18);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(1, 0xffb74d, 1);
+      g.strokePath();
+      // Pulse line
+      g.lineStyle(2, 0xffffff, 0.7);
+      g.beginPath();
+      g.moveTo(6, 12);
+      g.lineTo(9, 12);
+      g.lineTo(11, 8);
+      g.lineTo(13, 16);
+      g.lineTo(15, 12);
+      g.lineTo(18, 12);
+      g.strokePath();
+    });
+
+    // SCADA Telemetry: Gold gauge/meter shape
+    this.createTexture(scene, 'enemy_scada_telemetry', size, size, (g) => {
+      g.fillStyle(0xb8860b, 1);
+      g.beginPath();
+      g.arc(12, 14, 10, Math.PI, 0, false);
+      g.lineTo(22, 18);
+      g.lineTo(2, 18);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(1, 0xdaa520, 1);
+      g.beginPath();
+      g.arc(12, 14, 10, Math.PI, 0, false);
+      g.strokePath();
+      // Needle
+      g.lineStyle(2, 0xffffff, 0.9);
+      g.beginPath();
+      g.moveTo(12, 14);
+      g.lineTo(17, 7);
+      g.strokePath();
+      // Center
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(12, 14, 2);
+    });
+
+    // Track Switch Command: Yellow railroad switch icon
+    this.createTexture(scene, 'enemy_track_switch_cmd', size, size, (g) => {
+      // Rail lines
+      g.lineStyle(3, 0xe7d747, 1);
+      g.beginPath();
+      g.moveTo(4, 18);
+      g.lineTo(12, 6);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(4, 18);
+      g.lineTo(20, 18);
+      g.strokePath();
+      // Switch lever
+      g.lineStyle(2, 0xffffff, 0.8);
+      g.beginPath();
+      g.moveTo(8, 14);
+      g.lineTo(14, 14);
+      g.strokePath();
+      // Switch point
+      g.fillStyle(0xe7d747, 1);
+      g.fillCircle(4, 18, 3);
+      g.lineStyle(1, 0xffeb3b, 1);
+      g.strokeCircle(4, 18, 3);
+    });
+
+    // Train Position: Gold diamond (railroad marker)
+    this.createTexture(scene, 'enemy_train_position', size, size, (g) => {
+      g.fillStyle(0xdaa520, 1);
+      g.beginPath();
+      g.moveTo(12, 2);
+      g.lineTo(22, 12);
+      g.lineTo(12, 22);
+      g.lineTo(2, 12);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(1, 0xffd700, 1);
+      g.strokePath();
+      // Inner cross
+      g.lineStyle(2, 0xffffff, 0.5);
+      g.beginPath();
+      g.moveTo(12, 6);
+      g.lineTo(12, 18);
+      g.moveTo(6, 12);
+      g.lineTo(18, 12);
+      g.strokePath();
+    });
+
     // === LEGITIMATE TRAFFIC (smooth, cool colors, friendly) ===
 
     // HTTP Request: Blue circle
@@ -465,6 +713,8 @@ export class AssetGenerator {
       { key: 'projectile_honeypot', color: 0xe7d747 },
       { key: 'projectile_rate_limiter', color: 0x0093b2 },
       { key: 'projectile_packet_inspector', color: 0x84bd00 },
+      { key: 'projectile_data_diode', color: 0x4caf50 },
+      { key: 'projectile_network_segmentation', color: 0xe7d747 },
     ];
 
     for (const { key, color } of projectiles) {

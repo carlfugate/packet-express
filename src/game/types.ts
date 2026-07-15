@@ -33,6 +33,7 @@ export interface EnemyConfig {
   reward: number;
   scoreValue: number;
   falsePositivePenalty?: number;
+  otDamage?: number; // Override damage when reaching end in OT zone
   description: string;
   abilities: string[];
 }

@@ -20,4 +20,10 @@ export const GAME_CONFIG = {
     penaltyMultiplier: 1.0,
     graceWaves: 3,
   },
+  otZone: {
+    enabled: true,
+    boundaryWaypointIndex: 10, // After waypoint 10 (halfway through the snake), enemies enter OT zone
+    damageMultiplier: 3, // Threats in OT zone cost 3 bandwidth instead of 1
+    ransomwareDamage: 5, // Ransomware reaching OT end = 5 bandwidth
+  },
 } as const;

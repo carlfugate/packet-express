@@ -7,6 +7,9 @@ const KILL_SCORES: Record<string, number> = {
   sql_injection: 200,
   ransomware_c2: 350,
   zero_day: 500,
+  modbus_exploit: 400,
+  firmware_worm: 350,
+  signal_jammer: 300,
 };
 
 const FALSE_POSITIVE_PENALTIES: Record<string, number> = {
@@ -14,6 +17,10 @@ const FALSE_POSITIVE_PENALTIES: Record<string, number> = {
   dns_query: 300,
   api_call: 250,
   email: 150,
+  plc_heartbeat: 500,
+  scada_telemetry: 400,
+  track_switch_cmd: 600,
+  train_position: 350,
 };
 
 export function calculateKillScore(enemyType: string, waveNumber: number): number {

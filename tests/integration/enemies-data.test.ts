@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ENEMIES } from '@/game/data/enemies';
 
-const KNOWN_ABILITIES = ['swarm', 'disguise', 'armor_pierce', 'encrypted', 'regen', 'stealth', 'armor'];
+const KNOWN_ABILITIES = ['swarm', 'disguise', 'armor_pierce', 'encrypted', 'regen', 'stealth', 'armor', 'disable_tower', 'jamming'];
 
 describe('enemies data', () => {
   it('has unique enemy IDs', () => {

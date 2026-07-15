@@ -5,10 +5,12 @@ import { calculateSellPrice } from '../logic/economy';
 import { GAME_CONFIG } from '../config';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
+import type { AbilitySystem } from '../systems/AbilitySystem';
 
 interface GameSceneInterface {
   getEnemies(): Enemy[];
   addProjectile(projectile: Projectile): void;
+  getAbilitySystem?(): AbilitySystem;
 }
 
 export class Tower extends Phaser.GameObjects.Container {
@@ -53,6 +55,11 @@ export class Tower extends Phaser.GameObjects.Container {
     const gameScene = this.scene as unknown as GameSceneInterface;
     const enemies = gameScene.getEnemies();
 
+    // Check if legit traffic is immune (Traffic Reroute ability)
+    const abilitySystem = gameScene.getAbilitySystem?.();
+    const legitImmune = abilitySystem?.isLegitImmune() ?? false;
+    const effectiveCanHitLegit = legitImmune ? false : this.config.canHitLegitimate;
+
     const targetList = enemies
       .filter((e) => e.isAlive)
       .map((enemy) => ({
@@ -67,7 +74,7 @@ export class Tower extends Phaser.GameObjects.Container {
       this.getRange(),
       targetList,
       this.config.targetingMode,
-      this.config.canHitLegitimate
+      effectiveCanHitLegit
     );
 
     if (targetIndex === null) return;
@@ -76,7 +83,7 @@ export class Tower extends Phaser.GameObjects.Container {
     const target = aliveEnemies[targetIndex];
     if (!target) return;
 
-    this.fireAt(target);
+    this.fireAt(target, abilitySystem);
     this.lastFireTime = time;
   }
 
@@ -122,7 +129,7 @@ export class Tower extends Phaser.GameObjects.Container {
     this.showingRange = false;
   }
 
-  private fireAt(target: Enemy): void {
+  private fireAt(target: Enemy, abilitySystem?: AbilitySystem): void {
     this.emit('tower-fired', this, target);
 
     // Muzzle flash animation: scale pulse
@@ -137,6 +144,10 @@ export class Tower extends Phaser.GameObjects.Container {
 
     let damage = this.getDamage();
     damage = calculateBonusDamage(damage, target.config.id, this.config.bonusVs);
+
+    // Apply ability damage multiplier (Threat Intel Burst)
+    const multiplier = abilitySystem?.getDamageMultiplier() ?? 1;
+    damage = damage * multiplier;
 
     if (this.config.reveals && target.config.abilities.includes('stealth') && !target.isRevealed) {
       target.reveal();

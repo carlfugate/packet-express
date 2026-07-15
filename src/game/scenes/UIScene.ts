@@ -42,6 +42,11 @@ export class UIScene extends Phaser.Scene {
   // Pause indicator
   private pauseOverlay: Phaser.GameObjects.Container | null = null;
 
+  // Ability buttons
+  private abilityButtons: Phaser.GameObjects.Container[] = [];
+  private abilityCooldownTexts: Phaser.GameObjects.Text[] = [];
+  private abilityTargetingIndicator: Phaser.GameObjects.Text | null = null;
+
   constructor() {
     super({ key: 'UI' });
   }
@@ -61,6 +66,9 @@ export class UIScene extends Phaser.Scene {
     this.selectedTowerId = null;
     this.towerActionPanel = null;
     this.selectedPlacedTower = null;
+    this.abilityButtons = [];
+    this.abilityCooldownTexts = [];
+    this.abilityTargetingIndicator = null;
 
     // === TOP BAR (HUD) ===
     const barBg = this.add.rectangle(640, 20, 1280, 40, 0x044872, 0.9);
@@ -98,6 +106,9 @@ export class UIScene extends Phaser.Scene {
     // === TOWER SELECTION BAR (bottom) ===
     this.createTowerBar();
 
+    // === ABILITY BUTTONS (right side, below speed controls) ===
+    this.createAbilityButtons();
+
     // === EVENT LISTENERS from GameScene ===
     this.gameScene.events.on('threat-killed', this.onThreatKilled, this);
     this.gameScene.events.on('false-positive', this.onFalsePositive, this);
@@ -109,6 +120,8 @@ export class UIScene extends Phaser.Scene {
     this.gameScene.events.on('pause-toggled', this.onPauseToggled, this);
     this.gameScene.events.on('placed-tower-selected', this.onPlacedTowerSelected, this);
     this.gameScene.events.on('placed-tower-deselected', this.onPlacedTowerDeselected, this);
+    this.gameScene.events.on('ability-targeting', this.onAbilityTargeting, this);
+    this.gameScene.events.on('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
 
     // Cleanup on shutdown
     this.events.on('shutdown', () => {
@@ -122,6 +135,8 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.off('pause-toggled', this.onPauseToggled, this);
       this.gameScene.events.off('placed-tower-selected', this.onPlacedTowerSelected, this);
       this.gameScene.events.off('placed-tower-deselected', this.onPlacedTowerDeselected, this);
+      this.gameScene.events.off('ability-targeting', this.onAbilityTargeting, this);
+      this.gameScene.events.off('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
     });
   }
 
@@ -136,6 +151,9 @@ export class UIScene extends Phaser.Scene {
     const accuracyPct = Math.round(state.accuracy * 100);
     this.accuracyText.setText(`Accuracy: ${accuracyPct}%`);
     this.accuracyText.setColor(accuracyPct >= 90 ? '#5EA500' : accuracyPct >= 70 ? '#E7D747' : '#D9534F');
+
+    // Update ability cooldown displays
+    this.updateAbilityCooldowns();
   }
 
   private createSpeedControls(): void {
@@ -430,11 +448,164 @@ export class UIScene extends Phaser.Scene {
     this.addKillFeedEntry(`Wave ${data.wave} Clear! +${data.creditBonus}c +${data.scoreBonus}pts`, '#0093B2');
   }
 
-  private onGameOver(data: { victory: boolean; scoreState: any }): void {
+  private createAbilityButtons(): void {
+    const gameScene = this.gameScene as any;
+    const abilitySystem = gameScene.getAbilitySystem();
+    if (!abilitySystem) return;
+
+    const abilities = abilitySystem.getAbilities();
+    const startX = 1220;
+    const startY = 50;
+    const spacing = 50;
+
+    abilities.forEach((ability: any, index: number) => {
+      const y = startY + index * spacing;
+      const container = this.add.container(startX, y);
+
+      // Button background
+      const bg = this.add.rectangle(0, 0, 48, 40, 0x0a1628, 0.9);
+      bg.setStrokeStyle(2, parseInt(ability.icon.replace('#', '0x'), 16));
+      bg.setInteractive({ useHandCursor: true });
+
+      // Ability short name
+      const label = this.add.text(0, -6, ability.shortName, {
+        fontSize: '14px',
+        color: ability.icon,
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+
+      // Cooldown text (hidden when ready)
+      const cdText = this.add.text(0, 10, '', {
+        fontSize: '10px',
+        color: '#B6B7B9',
+        fontFamily: 'Arial',
+      }).setOrigin(0.5);
+
+      container.add([bg, label, cdText]);
+
+      // Click handler
+      bg.on('pointerdown', () => {
+        gameScene.useAbility(ability.id);
+      });
+
+      bg.on('pointerover', () => {
+        // Show tooltip
+        this.showAbilityTooltip(ability, startX - 160, y);
+      });
+
+      bg.on('pointerout', () => {
+        this.hideTooltip();
+      });
+
+      this.abilityButtons.push(container);
+      this.abilityCooldownTexts.push(cdText);
+    });
+  }
+
+  private showAbilityTooltip(ability: any, x: number, y: number): void {
+    this.hideTooltip();
+    const container = this.add.container(x, y);
+
+    const lines = [
+      ability.name,
+      ability.description,
+      `Cooldown: ${ability.cooldown / 1000}s`,
+    ];
+
+    const maxWidth = 180;
+    const padding = 8;
+    const lineHeight = 14;
+    const textHeight = lines.length * lineHeight + padding * 2;
+
+    const bg = this.add.rectangle(0, 0, maxWidth + padding * 2, textHeight, 0x0a1628, 0.95);
+    bg.setStrokeStyle(1, 0x0093b2);
+    bg.setOrigin(0.5, 0.5);
+    container.add(bg);
+
+    lines.forEach((line, i) => {
+      const color = i === 0 ? '#FFFFFF' : '#B6B7B9';
+      const style = i === 0 ? 'bold' : 'normal';
+      const text = this.add.text(-maxWidth / 2, -textHeight / 2 + padding + i * lineHeight, line, {
+        fontSize: '11px',
+        color,
+        fontFamily: 'Arial',
+        fontStyle: style,
+        wordWrap: { width: maxWidth },
+      });
+      container.add(text);
+    });
+
+    this.tooltip = container;
+  }
+
+  private updateAbilityCooldowns(): void {
+    const gameScene = this.gameScene as any;
+    const abilitySystem = gameScene.getAbilitySystem?.();
+    if (!abilitySystem) return;
+
+    const abilities = abilitySystem.getAbilities();
+    abilities.forEach((ability: any, index: number) => {
+      if (index >= this.abilityButtons.length) return;
+
+      const container = this.abilityButtons[index];
+      const bg = container.getAt(0) as Phaser.GameObjects.Rectangle;
+      const label = container.getAt(1) as Phaser.GameObjects.Text;
+      const cdText = this.abilityCooldownTexts[index];
+
+      const ready = abilitySystem.isReady(ability.id);
+      const remaining = abilitySystem.getCooldownRemaining(ability.id);
+
+      if (ready) {
+        bg.setFillStyle(0x0a1628, 0.9);
+        bg.setStrokeStyle(2, parseInt(ability.icon.replace('#', '0x'), 16));
+        label.setAlpha(1);
+        cdText.setText('');
+      } else {
+        bg.setFillStyle(0x1a1a1a, 0.9);
+        bg.setStrokeStyle(2, 0x484848);
+        label.setAlpha(0.4);
+        cdText.setText(`${remaining}s`);
+      }
+    });
+  }
+
+  private onAbilityTargeting(_abilityId: string): void {
+    // Show targeting mode indicator
+    if (!this.abilityTargetingIndicator) {
+      this.abilityTargetingIndicator = this.add.text(640, 50, 'Click map to target Emergency Patch', {
+        fontSize: '16px',
+        color: '#0076A8',
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+        backgroundColor: '#0a1628',
+        padding: { left: 12, right: 12, top: 4, bottom: 4 },
+      }).setOrigin(0.5);
+    }
+  }
+
+  private onAbilityTargetingCancelled(): void {
+    if (this.abilityTargetingIndicator) {
+      this.abilityTargetingIndicator.destroy();
+      this.abilityTargetingIndicator = null;
+    }
+  }
+
+  private onGameOver(data: {
+    victory: boolean;
+    scoreState: any;
+    towerStats?: Record<string, { kills: number; falsePositives: number }>;
+    upgradesUsed?: number;
+    otDamageOccurred?: boolean;
+    abilitiesUsed?: number;
+    towersPlaced?: string[];
+  }): void {
     const scoreState = data.scoreState;
     const accuracy = calculateAccuracy(scoreState.threatsKilled, scoreState.falsePositives);
     const finalScore = calculateFinalScore(scoreState);
     const baseScore = scoreState.score;
+    const towerStats = data.towerStats ?? {};
+    const towersPlaced = data.towersPlaced ?? [];
 
     let multiplierLabel: string;
     if (accuracy >= 1.0) multiplierLabel = '1.5x';
@@ -443,70 +614,144 @@ export class UIScene extends Phaser.Scene {
     else if (accuracy >= 0.5) multiplierLabel = '0.7x';
     else multiplierLabel = '0.5x';
 
-    const titleText = data.victory ? 'NETWORK SECURED' : 'NETWORK BREACHED';
-    const titleColor = data.victory ? '#84BD00' : '#D9534F';
+    const statusText = data.victory ? 'NETWORK SECURED' : 'NETWORK BREACHED';
+    const statusColor = data.victory ? '#5EA500' : '#D9534F';
 
     // Dark overlay
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8);
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.85);
 
-    // Title
-    this.add
-      .text(640, 140, titleText, { fontSize: '52px', color: titleColor, fontFamily: 'Arial', fontStyle: 'bold' })
-      .setOrigin(0.5);
+    // === INCIDENT REPORT HEADER ===
+    this.add.text(640, 40, 'INCIDENT REPORT', {
+      fontSize: '28px', color: '#0076A8', fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
 
-    // Score calculation breakdown
-    this.add
-      .text(640, 210, `${baseScore} x ${multiplierLabel} = ${finalScore}`, {
-        fontSize: '28px', color: '#E7D747', fontFamily: 'Arial', fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(640, 240, 'Base Score x Accuracy Multiplier = Final Score', {
-        fontSize: '14px', color: '#B6B7B9', fontFamily: 'Arial',
-      })
-      .setOrigin(0.5);
+    this.add.text(640, 70, `Status: ${statusText}`, {
+      fontSize: '18px', color: statusColor, fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Separator
+    this.add.rectangle(640, 90, 500, 1, 0x0093b2, 0.6);
+
+    // === SCORE SECTION ===
+    const scoreY = 110;
+    this.add.text(640, scoreY, `SCORE: ${finalScore.toLocaleString()}  (${baseScore.toLocaleString()} x ${multiplierLabel})`, {
+      fontSize: '16px', color: '#E7D747', fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
 
     // Accuracy bar
-    const barX = 480;
-    const barY = 280;
-    const barW = 320;
-    const barH = 20;
-    // Background
-    this.add.rectangle(barX + barW / 2, barY + barH / 2, barW, barH, 0x333333, 1).setOrigin(0.5);
-    // Fill (colored by accuracy)
-    const accColor = accuracy >= 0.9 ? 0x5ea500 : accuracy >= 0.7 ? 0xe7d747 : 0xd9534f;
-    const fillW = barW * accuracy;
-    this.add.rectangle(barX + fillW / 2, barY + barH / 2, fillW, barH, accColor, 1).setOrigin(0.5);
-    this.add
-      .text(640, barY + barH + 8, `Accuracy: ${Math.round(accuracy * 100)}%`, {
-        fontSize: '16px', color: '#FFFFFF', fontFamily: 'Arial',
-      })
-      .setOrigin(0.5);
+    const accPct = Math.round(accuracy * 100);
+    const barFull = 20;
+    const barFilled = Math.round(barFull * accuracy);
+    const barStr = '\u2588'.repeat(barFilled) + '\u2591'.repeat(barFull - barFilled);
+    const accColor = accPct >= 90 ? '#5EA500' : accPct >= 70 ? '#E7D747' : '#D9534F';
+    this.add.text(640, scoreY + 24, `Accuracy: ${accPct}%  ${barStr}`, {
+      fontSize: '13px', color: accColor, fontFamily: 'Courier New, monospace',
+    }).setOrigin(0.5);
 
-    // Stats
-    const statsY = 340;
-    this.add
-      .text(640, statsY, `Threats Killed: ${scoreState.threatsKilled}`, { fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial' })
-      .setOrigin(0.5);
-    this.add
-      .text(640, statsY + 30, `False Positives: ${scoreState.falsePositives}`, {
-        fontSize: '18px',
-        color: scoreState.falsePositives > 0 ? '#D9534F' : '#5EA500',
-        fontFamily: 'Arial',
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(640, statsY + 60, `Threats Leaked: ${scoreState.threatsLeaked}`, { fontSize: '18px', color: '#F47F28', fontFamily: 'Arial' })
-      .setOrigin(0.5);
-    this.add
-      .text(640, statsY + 90, `Legitimate Delivered: ${scoreState.legitimateDelivered}`, { fontSize: '18px', color: '#5EA500', fontFamily: 'Arial' })
-      .setOrigin(0.5);
-    this.add
-      .text(640, statsY + 120, `Waves Completed: ${scoreState.currentWave}/20`, { fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial' })
-      .setOrigin(0.5);
+    this.add.text(640, scoreY + 44, `Waves Completed: ${scoreState.currentWave}/20`, {
+      fontSize: '13px', color: '#FFFFFF', fontFamily: 'Courier New, monospace',
+    }).setOrigin(0.5);
 
-    // Play Again button (large and obvious)
-    const btnY = 560;
+    // Separator
+    this.add.rectangle(640, scoreY + 62, 500, 1, 0x0093b2, 0.4);
+
+    // === THREAT SUMMARY ===
+    const threatY = scoreY + 78;
+    this.add.text(640, threatY, 'THREAT SUMMARY', {
+      fontSize: '14px', color: '#0093B2', fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const threatLines = [
+      { text: `Threats Neutralized: ${scoreState.threatsKilled}`, color: '#5EA500' },
+      { text: `Threats Leaked: ${scoreState.threatsLeaked}`, color: scoreState.threatsLeaked > 0 ? '#F47F28' : '#5EA500' },
+      { text: `False Positives: ${scoreState.falsePositives}`, color: scoreState.falsePositives > 0 ? '#D9534F' : '#5EA500' },
+      { text: `Legitimate Delivered: ${scoreState.legitimateDelivered}`, color: '#5EA500' },
+    ];
+
+    threatLines.forEach((line, i) => {
+      this.add.text(640, threatY + 20 + i * 18, line.text, {
+        fontSize: '12px', color: line.color, fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5);
+    });
+
+    // Separator
+    const defenseY = threatY + 20 + threatLines.length * 18 + 10;
+    this.add.rectangle(640, defenseY, 500, 1, 0x0093b2, 0.4);
+
+    // === DEFENSE ANALYSIS ===
+    const analysisY = defenseY + 16;
+    this.add.text(640, analysisY, 'DEFENSE ANALYSIS', {
+      fontSize: '14px', color: '#0093B2', fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Find best and worst tower
+    const towerEntries = Object.entries(towerStats);
+    let bestTower = '';
+    let bestKills = 0;
+    let bestFP = 0;
+    let worstTower = '';
+    let worstFP = 0;
+
+    for (const [id, stats] of towerEntries) {
+      if (stats.kills > bestKills || (stats.kills === bestKills && stats.falsePositives < bestFP)) {
+        bestTower = id;
+        bestKills = stats.kills;
+        bestFP = stats.falsePositives;
+      }
+      if (stats.falsePositives > worstFP) {
+        worstTower = id;
+        worstFP = stats.falsePositives;
+      }
+    }
+
+    const towerNames: Record<string, string> = {
+      firewall: 'Firewall', ids: 'IDS', waf: 'WAF', honeypot: 'Honeypot',
+      rate_limiter: 'Rate Limiter', packet_inspector: 'Packet Inspector',
+      data_diode: 'Data Diode', network_segmentation: 'Segmentation',
+    };
+
+    let analysisLineY = analysisY + 20;
+    if (bestTower) {
+      this.add.text(640, analysisLineY, `Best: ${towerNames[bestTower] ?? bestTower} (${bestKills} kills, ${bestFP} FP)`, {
+        fontSize: '12px', color: '#84BD00', fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5);
+      analysisLineY += 18;
+    }
+    if (worstTower && worstFP > 0) {
+      this.add.text(640, analysisLineY, `Worst: ${towerNames[worstTower] ?? worstTower} (${worstFP} FPs)`, {
+        fontSize: '12px', color: '#F47F28', fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5);
+      analysisLineY += 18;
+    }
+    if (!bestTower && !worstTower) {
+      this.add.text(640, analysisLineY, 'No tower data recorded', {
+        fontSize: '12px', color: '#7A7B7C', fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5);
+      analysisLineY += 18;
+    }
+
+    // Separator
+    this.add.rectangle(640, analysisLineY + 6, 500, 1, 0x0093b2, 0.4);
+
+    // === RECOMMENDATIONS ===
+    const recY = analysisLineY + 22;
+    this.add.text(640, recY, 'RECOMMENDATIONS', {
+      fontSize: '14px', color: '#0093B2', fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const recommendations = this.generateRecommendations(
+      scoreState, towerStats, towersPlaced,
+      data.upgradesUsed ?? 0, data.otDamageOccurred ?? false, accuracy
+    );
+
+    recommendations.forEach((rec, i) => {
+      this.add.text(640, recY + 20 + i * 16, rec, {
+        fontSize: '11px', color: '#B6B7B9', fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5);
+    });
+
+    // === PLAY AGAIN BUTTON ===
+    const btnY = Math.min(recY + 20 + recommendations.length * 16 + 40, 640);
     const btnBg = this.add.rectangle(640, btnY, 240, 60, 0x0076a8, 1);
     btnBg.setStrokeStyle(3, 0x48cae4);
     btnBg.setInteractive({ useHandCursor: true });
@@ -537,6 +782,63 @@ export class UIScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+  }
+
+  private generateRecommendations(
+    scoreState: any,
+    towerStats: Record<string, { kills: number; falsePositives: number }>,
+    towersPlaced: string[],
+    upgradesUsed: number,
+    otDamageOccurred: boolean,
+    accuracy: number
+  ): string[] {
+    const recs: string[] = [];
+
+    // Find highest FP tower
+    let highestFPTower = '';
+    let highestFPCount = 0;
+    for (const [id, stats] of Object.entries(towerStats)) {
+      if (stats.falsePositives > highestFPCount) {
+        highestFPTower = id;
+        highestFPCount = stats.falsePositives;
+      }
+    }
+
+    const towerNames: Record<string, string> = {
+      firewall: 'Firewall', ids: 'IDS', waf: 'WAF', honeypot: 'Honeypot',
+      rate_limiter: 'Rate Limiter', packet_inspector: 'Packet Inspector',
+      data_diode: 'Data Diode', network_segmentation: 'Segmentation',
+    };
+
+    const fpTowers = ['rate_limiter', 'waf', 'ids'];
+    const hasFPTower = towersPlaced.some((t) => fpTowers.includes(t));
+
+    if (scoreState.falsePositives > 10 && hasFPTower && highestFPTower) {
+      recs.push(`Replace ${towerNames[highestFPTower] ?? highestFPTower}s with Firewalls in high-traffic lanes`);
+    }
+
+    if (scoreState.threatsLeaked > 0 && !towersPlaced.includes('packet_inspector')) {
+      recs.push('Add Packet Inspector to reveal stealth threats');
+    }
+
+    if (otDamageOccurred) {
+      recs.push('Deploy Data Diode at IT/OT boundary to protect critical infrastructure');
+    }
+
+    if (accuracy > 0.95 && recs.length < 3) {
+      recs.push('Excellent precision. Consider more aggressive towers for faster clears.');
+    }
+
+    if (upgradesUsed === 0 && recs.length < 3) {
+      recs.push('Upgrade towers for increased effectiveness in later waves');
+    }
+
+    // Fallback if no specific recommendations
+    if (recs.length === 0) {
+      recs.push('Solid defense. Keep refining tower placement for maximum coverage.');
+    }
+
+    return recs.slice(0, 4); // Max 4 recs to fit on screen
   }
 
   private onPauseToggled(paused: boolean): void {

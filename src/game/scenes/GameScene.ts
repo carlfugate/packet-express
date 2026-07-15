@@ -5,6 +5,7 @@ import { Projectile } from '../entities/Projectile';
 import { WaveManager } from '../systems/WaveManager';
 import { BuildSystem } from '../systems/BuildSystem';
 import { MapRenderer } from '../systems/MapRenderer';
+import { AbilitySystem } from '../systems/AbilitySystem';
 import { MAP_DATA } from '../data/maps';
 import { TOWERS } from '../data/towers';
 import { GAME_CONFIG } from '../config';
@@ -33,11 +34,18 @@ export class GameScene extends Phaser.Scene {
   private waveManager!: WaveManager;
   private buildSystem!: BuildSystem;
   private mapRenderer!: MapRenderer;
+  private abilitySystem!: AbilitySystem;
 
   // Game state
   private gameOver: boolean = false;
   private paused: boolean = false;
   private gameSpeed: number = 1;
+
+  // Tower stats tracking (per tower type)
+  private towerStats: Map<string, { kills: number; falsePositives: number }> = new Map();
+  private upgradesUsed: number = 0;
+  private otDamageOccurred: boolean = false;
+  private abilitiesUsed: number = 0;
 
   constructor() {
     super({ key: 'Game' });
@@ -53,6 +61,10 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.towers = [];
     this.projectiles = [];
+    this.towerStats = new Map();
+    this.upgradesUsed = 0;
+    this.otDamageOccurred = false;
+    this.abilitiesUsed = 0;
 
     // Initialize score state
     this.scoreState = {
@@ -72,6 +84,7 @@ export class GameScene extends Phaser.Scene {
 
     this.waveManager = new WaveManager(this);
     this.buildSystem = new BuildSystem(this);
+    this.abilitySystem = new AbilitySystem(this);
 
     // Launch UI scene on top
     this.scene.launch('UI', { gameScene: this });
@@ -150,6 +163,8 @@ export class GameScene extends Phaser.Scene {
       threatsKilled: this.scoreState.threatsKilled,
       falsePositives: this.scoreState.falsePositives,
       gameOver: this.gameOver,
+      abilitiesUsed: this.abilitiesUsed,
+      towerStats: Object.fromEntries(this.towerStats),
     };
   }
 
@@ -159,16 +174,22 @@ export class GameScene extends Phaser.Scene {
     this.enemies.push(enemy);
 
     // Listen for enemy events on the instance
-    enemy.on('enemy-killed', (config: any) => this.handleEnemyKilled(config));
+    enemy.on('enemy-killed', (config: any) => this.handleEnemyKilled(config, enemy.lastHitBy));
     enemy.on('enemy-reached-end', () => this.handleEnemyReachedEnd(enemy.config));
   }
 
-  private handleEnemyKilled(config: any): void {
+  private handleEnemyKilled(config: any, lastHitBy?: string): void {
     if (config.type === 'legitimate') {
       // FALSE POSITIVE
       this.scoreState.falsePositives++;
       this.scoreState.score = applyFalsePositivePenalty(this.scoreState.score, config.id);
       this.scoreState.accuracy = calculateAccuracy(this.scoreState.threatsKilled, this.scoreState.falsePositives);
+      // Track tower false positive
+      if (lastHitBy) {
+        const stats = this.towerStats.get(lastHitBy) ?? { kills: 0, falsePositives: 0 };
+        stats.falsePositives++;
+        this.towerStats.set(lastHitBy, stats);
+      }
       this.events.emit('false-positive', config);
     } else {
       // Legitimate kill
@@ -177,6 +198,12 @@ export class GameScene extends Phaser.Scene {
       this.scoreState.score += killScore;
       this.credits += config.reward;
       this.scoreState.accuracy = calculateAccuracy(this.scoreState.threatsKilled, this.scoreState.falsePositives);
+      // Track tower kill
+      if (lastHitBy) {
+        const stats = this.towerStats.get(lastHitBy) ?? { kills: 0, falsePositives: 0 };
+        stats.kills++;
+        this.towerStats.set(lastHitBy, stats);
+      }
       this.events.emit('threat-killed', { config, score: killScore });
     }
     this.waveManager.onEnemyDefeated();
@@ -194,6 +221,9 @@ export class GameScene extends Phaser.Scene {
       const damage = config.otDamage || 1;
       this.bandwidth -= damage;
       this.scoreState.threatsLeaked++;
+      if (damage > 1) {
+        this.otDamageOccurred = true;
+      }
       this.events.emit('threat-leaked', { config, damage });
       if (this.bandwidth <= 0) {
         this.endGame(false);
@@ -230,6 +260,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    // Check if an ability is in targeting mode (Emergency Patch)
+    const targetingAbility = this.abilitySystem.getTargetingMode();
+    if (targetingAbility) {
+      const used = this.abilitySystem.use(targetingAbility, this.enemies, { x: pointer.worldX, y: pointer.worldY });
+      if (used) {
+        this.abilitiesUsed++;
+      }
+      this.abilitySystem.setTargetingMode(null);
+      this.events.emit('ability-targeting-cancelled');
+      return;
+    }
+
     // Check if clicking on an existing tower first
     const clickedTower = this.towers.find((t) => {
       const dx = Math.abs(pointer.worldX - t.x);
@@ -296,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     const result = this.buildSystem.upgrade(slotId);
     if (result) {
       this.credits -= result.cost;
+      this.upgradesUsed++;
       // Upgrade the tower entity
       const tower = this.towers.find((t) => t.slotId === slotId);
       if (tower) {
@@ -326,9 +369,37 @@ export class GameScene extends Phaser.Scene {
     this.gameSpeed = speed;
   }
 
+  getAbilitySystem(): AbilitySystem {
+    return this.abilitySystem;
+  }
+
+  useAbility(abilityId: string): boolean {
+    if (abilityId === 'emergency_patch') {
+      // Enter targeting mode — don't fire immediately
+      if (!this.abilitySystem.isReady(abilityId)) return false;
+      this.abilitySystem.setTargetingMode(abilityId);
+      this.events.emit('ability-targeting', abilityId);
+      return true;
+    }
+    // Non-targeted abilities fire immediately
+    const used = this.abilitySystem.use(abilityId, this.enemies);
+    if (used) {
+      this.abilitiesUsed++;
+    }
+    return used;
+  }
+
   private endGame(victory: boolean): void {
     this.gameOver = true;
-    this.events.emit('game-over', { victory, scoreState: this.scoreState });
+    this.events.emit('game-over', {
+      victory,
+      scoreState: this.scoreState,
+      towerStats: Object.fromEntries(this.towerStats),
+      upgradesUsed: this.upgradesUsed,
+      otDamageOccurred: this.otDamageOccurred,
+      abilitiesUsed: this.abilitiesUsed,
+      towersPlaced: this.towers.map((t) => t.config.id),
+    });
   }
 
   shutdown(): void {

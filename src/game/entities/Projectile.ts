@@ -84,7 +84,7 @@ export class Projectile extends Phaser.GameObjects.Image {
 
   private onHit(): void {
     if (this.target && this.target.isAlive) {
-      this.target.takeDamage(this.damage);
+      this.target.takeDamage(this.damage, this.towerId);
       if (this.slowFactor !== undefined && this.slowDuration !== undefined) {
         this.target.applySlow(this.towerId, this.slowFactor, this.slowDuration);
       }

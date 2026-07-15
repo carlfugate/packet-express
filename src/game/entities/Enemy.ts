@@ -18,6 +18,7 @@ export class Enemy extends Phaser.GameObjects.Container {
   public pathProgress: number = 0;
   public isAlive: boolean = true;
   public isRevealed: boolean = false;
+  public lastHitBy: string = '';
 
   private healthBar: Phaser.GameObjects.Graphics;
   private sprite: Phaser.GameObjects.Image;
@@ -107,7 +108,10 @@ export class Enemy extends Phaser.GameObjects.Container {
     }
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number, sourceId?: string): void {
+    if (sourceId) {
+      this.lastHitBy = sourceId;
+    }
     this.currentHealth -= amount;
     this.updateHealthBar();
     if (this.currentHealth <= 0) {

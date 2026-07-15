@@ -49,6 +49,112 @@ export class MapRenderer {
       bg.lineTo(1280, y);
       bg.strokePath();
     }
+
+    // IT Zone: Circuit board dots pattern (top half)
+    this.drawITZoneDetail(bg);
+
+    // OT Zone: Industrial icons (bottom half)
+    this.drawOTZoneDetail(bg);
+
+    // Vignette overlay (darker edges)
+    this.drawVignette(bg);
+  }
+
+  private drawITZoneDetail(bg: Phaser.GameObjects.Graphics): void {
+    // Faint circuit-board dot grid at very low opacity
+    bg.fillStyle(0x0093b2, 0.04);
+    for (let x = 20; x < 1280; x += 60) {
+      for (let y = 20; y < 300; y += 60) {
+        bg.fillCircle(x, y, 1.5);
+        // Occasional connection lines between dots
+        if (Math.random() > 0.6 && x + 60 < 1280) {
+          bg.lineStyle(1, 0x0093b2, 0.03);
+          bg.beginPath();
+          bg.moveTo(x, y);
+          bg.lineTo(x + 60, y);
+          bg.strokePath();
+        }
+        if (Math.random() > 0.7 && y + 60 < 300) {
+          bg.lineStyle(1, 0x0093b2, 0.03);
+          bg.beginPath();
+          bg.moveTo(x, y);
+          bg.lineTo(x, y + 60);
+          bg.strokePath();
+        }
+      }
+    }
+  }
+
+  private drawOTZoneDetail(bg: Phaser.GameObjects.Graphics): void {
+    // Scattered industrial icons at very low opacity in OT zone (y > 320)
+    const iconPositions = [
+      { x: 100, y: 400 }, { x: 300, y: 450 }, { x: 500, y: 380 },
+      { x: 700, y: 500 }, { x: 900, y: 420 }, { x: 1100, y: 460 },
+      { x: 200, y: 550 }, { x: 600, y: 600 }, { x: 1000, y: 550 },
+      { x: 400, y: 650 }, { x: 800, y: 620 }, { x: 150, y: 650 },
+    ];
+
+    for (let i = 0; i < iconPositions.length; i++) {
+      const pos = iconPositions[i];
+      const type = i % 3;
+
+      if (type === 0) {
+        // Tiny gear shape
+        bg.lineStyle(1, 0xf47f28, 0.04);
+        const teeth = 6;
+        bg.beginPath();
+        for (let t = 0; t < teeth * 2; t++) {
+          const angle = (Math.PI * t) / teeth;
+          const r = t % 2 === 0 ? 8 : 5;
+          const px = pos.x + r * Math.cos(angle);
+          const py = pos.y + r * Math.sin(angle);
+          if (t === 0) bg.moveTo(px, py);
+          else bg.lineTo(px, py);
+        }
+        bg.closePath();
+        bg.strokePath();
+      } else if (type === 1) {
+        // Railroad crossing X
+        bg.lineStyle(1, 0xe7d747, 0.04);
+        bg.beginPath();
+        bg.moveTo(pos.x - 6, pos.y - 6);
+        bg.lineTo(pos.x + 6, pos.y + 6);
+        bg.strokePath();
+        bg.beginPath();
+        bg.moveTo(pos.x + 6, pos.y - 6);
+        bg.lineTo(pos.x - 6, pos.y + 6);
+        bg.strokePath();
+      } else {
+        // Signal light (small circle with line below)
+        bg.lineStyle(1, 0xf47f28, 0.04);
+        bg.strokeCircle(pos.x, pos.y, 4);
+        bg.beginPath();
+        bg.moveTo(pos.x, pos.y + 4);
+        bg.lineTo(pos.x, pos.y + 10);
+        bg.strokePath();
+      }
+    }
+  }
+
+  private drawVignette(bg: Phaser.GameObjects.Graphics): void {
+    // Darken edges with semi-transparent rectangles
+    const edgeAlpha = 0.15;
+    // Top edge
+    bg.fillStyle(0x000000, edgeAlpha);
+    bg.fillRect(0, 0, 1280, 40);
+    bg.fillStyle(0x000000, edgeAlpha * 0.6);
+    bg.fillRect(0, 40, 1280, 30);
+    // Bottom edge
+    bg.fillStyle(0x000000, edgeAlpha);
+    bg.fillRect(0, 680, 1280, 40);
+    bg.fillStyle(0x000000, edgeAlpha * 0.6);
+    bg.fillRect(0, 650, 1280, 30);
+    // Left edge
+    bg.fillStyle(0x000000, edgeAlpha * 0.5);
+    bg.fillRect(0, 0, 30, 720);
+    // Right edge
+    bg.fillStyle(0x000000, edgeAlpha * 0.5);
+    bg.fillRect(1250, 0, 30, 720);
   }
 
   drawTrack(waypoints: Array<{ x: number; y: number }>): void {

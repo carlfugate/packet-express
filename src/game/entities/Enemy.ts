@@ -101,6 +101,28 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.pathProgress =
       this.totalPathLength > 0 ? this.distanceOnPath / this.totalPathLength : 0;
 
+    // === Movement Animations ===
+
+    // Bob animation: gentle float up/down
+    const bob = Math.sin(time * 0.003 + this.distanceOnPath) * 2;
+    this.sprite.y = bob;
+
+    // DDoS jitter (swarm ability)
+    if (this.config.abilities.includes('swarm')) {
+      this.sprite.x = (Math.random() - 0.5) * 3;
+      this.sprite.y = (Math.random() - 0.5) * 3;
+    }
+
+    // Stealth flicker
+    if (this.config.abilities.includes('stealth') && !this.isRevealed) {
+      this.sprite.alpha = 0.1 + Math.random() * 0.15;
+    }
+
+    // Legitimate glow pulse
+    if (this.isLegitimate) {
+      this.sprite.alpha = 0.8 + Math.sin(time * 0.005) * 0.2;
+    }
+
     if (this.currentWaypointIndex >= this.waypoints.length) {
       this.emit('enemy-reached-end', this);
       this.isAlive = false;

@@ -153,6 +153,17 @@ export class Tower extends Phaser.GameObjects.Container {
       target.reveal();
     }
 
+    // Beam-type towers: instant line effect instead of projectile
+    if (this.config.id === 'firewall' || this.config.id === 'packet_inspector') {
+      this.createBeamEffect(target, damage);
+      return;
+    }
+
+    // IDS: detection ring effect in addition to projectile
+    if (this.config.id === 'ids') {
+      this.createDetectionRing();
+    }
+
     const upgrade = this.config.upgrades[this.level];
     const options = upgrade.slowFactor
       ? { slowFactor: upgrade.slowFactor, slowDuration: 2000 }
@@ -170,5 +181,72 @@ export class Tower extends Phaser.GameObjects.Container {
 
     const gameScene = this.scene as unknown as GameSceneInterface;
     gameScene.addProjectile(projectile);
+  }
+
+  private createBeamEffect(target: Enemy, damage: number): void {
+    const beamColor = this.config.id === 'firewall' ? 0x0076a8 : 0x84bd00;
+    const beam = this.scene.add.graphics();
+    beam.setDepth(5);
+
+    // Draw beam line
+    beam.lineStyle(3, beamColor, 1);
+    beam.beginPath();
+    beam.moveTo(this.x, this.y);
+    beam.lineTo(target.x, target.y);
+    beam.strokePath();
+
+    // Inner bright core
+    beam.lineStyle(1, 0xffffff, 0.8);
+    beam.beginPath();
+    beam.moveTo(this.x, this.y);
+    beam.lineTo(target.x, target.y);
+    beam.strokePath();
+
+    // Apply damage directly
+    target.takeDamage(damage, this.config.id);
+
+    // Apply slow if applicable
+    const upgrade = this.config.upgrades[this.level];
+    if (upgrade.slowFactor) {
+      target.applySlow(this.config.id, upgrade.slowFactor, 2000);
+    }
+
+    // Fade beam out
+    this.scene.tweens.add({
+      targets: beam,
+      alpha: 0,
+      duration: 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => beam.destroy(),
+    });
+
+    // Impact flash at target
+    const flash = this.scene.add.circle(target.x, target.y, 6, beamColor, 0.8);
+    flash.setDepth(5);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 2.5,
+      duration: 200,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  private createDetectionRing(): void {
+    const ring = this.scene.add.circle(this.x, this.y, 10, 0x753bbd, 0);
+    ring.setStrokeStyle(2, 0xb388ff, 0.7);
+    ring.setDepth(3);
+
+    this.scene.tweens.add({
+      targets: ring,
+      radius: this.getRange() * 0.5,
+      alpha: 0,
+      duration: 400,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        ring.setStrokeStyle(2, 0xb388ff, ring.alpha * 0.7);
+      },
+      onComplete: () => ring.destroy(),
+    });
   }
 }

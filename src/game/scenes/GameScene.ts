@@ -17,6 +17,8 @@ import {
   calculateWaveBonus,
 } from '../logic/scoring';
 import { calculateWaveClearBonus } from '../logic/economy';
+import type { WaveModifier, ModifierContext } from '../data/modifiers';
+import { createDefaultModifierContext } from '../data/modifiers';
 
 export class GameScene extends Phaser.Scene {
   // State
@@ -48,6 +50,10 @@ export class GameScene extends Phaser.Scene {
 
   // Difficulty
   private difficulty: DifficultyConfig = DIFFICULTIES[1];
+
+  // Modifier state
+  private activeModifier: WaveModifier | null = null;
+  private modifierContext: ModifierContext = createDefaultModifierContext();
 
   constructor() {
     super({ key: 'Game' });
@@ -193,7 +199,7 @@ export class GameScene extends Phaser.Scene {
       // FALSE POSITIVE
       this.scoreState.falsePositives++;
       const basePenalty = config.falsePositivePenalty || 200;
-      const adjustedPenalty = Math.round(basePenalty * this.difficulty.falsePositivePenaltyMultiplier);
+      const adjustedPenalty = Math.round(basePenalty * this.difficulty.falsePositivePenaltyMultiplier * this.modifierContext.falsePositivePenaltyMult);
       this.scoreState.score = Math.max(0, this.scoreState.score - adjustedPenalty);
       this.scoreState.accuracy = calculateAccuracy(this.scoreState.threatsKilled, this.scoreState.falsePositives);
       // Track tower false positive
@@ -206,9 +212,10 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Legitimate kill
       this.scoreState.threatsKilled++;
-      const killScore = calculateKillScore(config.id, this.waveManager.getCurrentWave());
+      const killScore = Math.round(calculateKillScore(config.id, this.waveManager.getCurrentWave()) * this.modifierContext.scoreMultiplier);
       this.scoreState.score += killScore;
-      this.credits += config.reward;
+      const creditReward = Math.round(config.reward * this.modifierContext.creditMultiplier);
+      this.credits += creditReward;
       this.scoreState.accuracy = calculateAccuracy(this.scoreState.threatsKilled, this.scoreState.falsePositives);
       // Track tower kill
       if (lastHitBy) {
@@ -246,21 +253,63 @@ export class GameScene extends Phaser.Scene {
 
   private handleWaveComplete(): void {
     const waveNum = this.waveManager.getCurrentWave();
-    const clearBonus = calculateWaveClearBonus(waveNum);
-    const waveScoreBonus = calculateWaveBonus(waveNum);
+    const clearBonus = Math.round(calculateWaveClearBonus(waveNum) * this.modifierContext.creditMultiplier);
+    const waveScoreBonus = Math.round(calculateWaveBonus(waveNum) * this.modifierContext.scoreMultiplier);
     this.credits += clearBonus;
     this.scoreState.score += waveScoreBonus;
     this.scoreState.currentWave = waveNum;
+
+    // Apply overflow bonus (+50 credits) if active
+    if (this.activeModifier?.id === 'overflow') {
+      this.credits += 50;
+    }
+
+    // Revert active modifier after wave
+    if (this.activeModifier) {
+      this.activeModifier.revert(this.modifierContext);
+      this.activeModifier = null;
+      this.waveManager.setModifierContext(createDefaultModifierContext());
+    }
+
     this.events.emit('ui-wave-complete', { wave: waveNum, creditBonus: clearBonus, scoreBonus: waveScoreBonus });
 
     if (this.waveManager.isLastWave()) {
       this.endGame(true);
-    } else {
-      // Auto-start next wave after delay
-      this.time.delayedCall(this.difficulty.waveDelay, () => {
-        if (!this.gameOver) this.waveManager.startWave();
+    } else if (waveNum >= 1) {
+      // Show modifier cards starting from wave 2 onwards (after wave 1 completes)
+      this.events.emit('show-modifiers', { wave: waveNum });
+      // Listen for modifier selection
+      this.events.once('modifier-selected', (mod: WaveModifier) => {
+        this.applyModifier(mod);
+        this.startNextWaveAfterDelay();
       });
+      this.events.once('modifier-skipped', () => {
+        this.startNextWaveAfterDelay();
+      });
+    } else {
+      this.startNextWaveAfterDelay();
     }
+  }
+
+  private applyModifier(mod: WaveModifier): void {
+    this.activeModifier = mod;
+    this.modifierContext = createDefaultModifierContext();
+    mod.apply(this.modifierContext);
+    this.waveManager.setModifierContext(this.modifierContext);
+
+    // Handle special one-shot effects
+    if (mod.id === 'budget_surplus') {
+      this.credits += 100;
+    }
+    if (mod.id === 'budget_cut') {
+      this.credits = Math.max(0, this.credits - 50);
+    }
+  }
+
+  private startNextWaveAfterDelay(): void {
+    this.time.delayedCall(this.difficulty.waveDelay, () => {
+      if (!this.gameOver) this.waveManager.startWave();
+    });
   }
 
   private handleTowerPlaced(data: { slotId: string; towerId: string; config: any; level: number }): void {

@@ -4,6 +4,8 @@ import type { Wave, WaveEntry, EnemyConfig } from '../types';
 import { getScaledHealth, calculateSpawnDelay, getWaveEnemyCount } from '../logic/waves';
 import type { DifficultyConfig } from '../config';
 import { DIFFICULTIES } from '../config';
+import type { ModifierContext } from '../data/modifiers';
+import { createDefaultModifierContext } from '../data/modifiers';
 
 export class WaveManager {
   private scene: Phaser.Scene;
@@ -16,6 +18,7 @@ export class WaveManager {
   private enemiesSpawned: number = 0;
   private totalEnemiesInWave: number = 0;
   private enemyConfigMap: Record<string, EnemyConfig>;
+  private modifierContext: ModifierContext = createDefaultModifierContext();
 
   constructor(scene: Phaser.Scene, difficulty?: DifficultyConfig) {
     this.scene = scene;
@@ -24,6 +27,14 @@ export class WaveManager {
     for (const enemy of ENEMIES) {
       this.enemyConfigMap[enemy.id] = enemy;
     }
+  }
+
+  setModifierContext(context: ModifierContext): void {
+    this.modifierContext = context;
+  }
+
+  getModifierContext(): ModifierContext {
+    return this.modifierContext;
   }
 
   startWave(): void {
@@ -44,7 +55,10 @@ export class WaveManager {
 
   private getAdjustedEnemyCount(wave: Wave): number {
     return wave.enemies.reduce((sum, entry) => {
-      return sum + Math.ceil(entry.count * this.difficulty.enemyCountMultiplier);
+      const config = this.enemyConfigMap[entry.type];
+      const isLegit = config?.type === 'legitimate';
+      const modMult = isLegit ? this.modifierContext.legitTrafficMult : this.modifierContext.enemyCountMult;
+      return sum + Math.ceil(entry.count * this.difficulty.enemyCountMultiplier * modMult);
     }, 0);
   }
 
@@ -56,7 +70,10 @@ export class WaveManager {
     for (const entry of wave.enemies) {
       const queue: Array<{ type: string; delay: number }> = [];
       const delay = calculateSpawnDelay(entry, wave.wave);
-      const adjustedCount = Math.ceil(entry.count * this.difficulty.enemyCountMultiplier);
+      const config = this.enemyConfigMap[entry.type];
+      const isLegit = config?.type === 'legitimate';
+      const modMult = isLegit ? this.modifierContext.legitTrafficMult : this.modifierContext.enemyCountMult;
+      const adjustedCount = Math.ceil(entry.count * this.difficulty.enemyCountMultiplier * modMult);
       for (let i = 0; i < adjustedCount; i++) {
         queue.push({ type: entry.type, delay });
       }
@@ -89,8 +106,8 @@ export class WaveManager {
       return;
     }
 
-    const scaledHealth = Math.round(getScaledHealth(config.health, this.currentWave) * this.difficulty.healthMultiplier);
-    const adjustedSpeed = Math.round(config.speed * this.difficulty.speedMultiplier);
+    const scaledHealth = Math.round(getScaledHealth(config.health, this.currentWave) * this.difficulty.healthMultiplier * this.modifierContext.enemyHealthMult);
+    const adjustedSpeed = Math.round(config.speed * this.difficulty.speedMultiplier * this.modifierContext.enemySpeedMult);
     this.enemiesSpawned++;
     this.enemiesAlive++;
 

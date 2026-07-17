@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { TOWERS } from '../data/towers';
 import { calculateFinalScore, calculateAccuracy } from '../logic/scoring';
+import { ModifierCardUI } from '../ui/ModifierCardUI';
+import { getRandomModifiers } from '../data/modifiers';
 
 const TOWER_COLORS: Record<string, number> = {
   firewall: 0x0076a8,
@@ -47,6 +49,9 @@ export class UIScene extends Phaser.Scene {
   private abilityCooldownTexts: Phaser.GameObjects.Text[] = [];
   private abilityTargetingIndicator: Phaser.GameObjects.Text | null = null;
 
+  // Modifier card UI
+  private modifierCardUI: ModifierCardUI | null = null;
+
   constructor() {
     super({ key: 'UI' });
   }
@@ -69,6 +74,7 @@ export class UIScene extends Phaser.Scene {
     this.abilityButtons = [];
     this.abilityCooldownTexts = [];
     this.abilityTargetingIndicator = null;
+    this.modifierCardUI = null;
 
     // === TOP BAR (HUD) ===
     const barBg = this.add.rectangle(640, 20, 1280, 40, 0x044872, 0.9);
@@ -122,6 +128,7 @@ export class UIScene extends Phaser.Scene {
     this.gameScene.events.on('placed-tower-deselected', this.onPlacedTowerDeselected, this);
     this.gameScene.events.on('ability-targeting', this.onAbilityTargeting, this);
     this.gameScene.events.on('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
+    this.gameScene.events.on('show-modifiers', this.onShowModifiers, this);
 
     // Cleanup on shutdown
     this.events.on('shutdown', () => {
@@ -137,6 +144,7 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.off('placed-tower-deselected', this.onPlacedTowerDeselected, this);
       this.gameScene.events.off('ability-targeting', this.onAbilityTargeting, this);
       this.gameScene.events.off('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
+      this.gameScene.events.off('show-modifiers', this.onShowModifiers, this);
     });
   }
 
@@ -589,6 +597,18 @@ export class UIScene extends Phaser.Scene {
       this.abilityTargetingIndicator.destroy();
       this.abilityTargetingIndicator = null;
     }
+  }
+
+  private onShowModifiers(): void {
+    const modifiers = getRandomModifiers(3);
+    this.modifierCardUI = new ModifierCardUI(this, modifiers, (selected) => {
+      this.modifierCardUI = null;
+      if (selected) {
+        this.gameScene.events.emit('modifier-selected', selected);
+      } else {
+        this.gameScene.events.emit('modifier-skipped');
+      }
+    });
   }
 
   private onGameOver(data: {

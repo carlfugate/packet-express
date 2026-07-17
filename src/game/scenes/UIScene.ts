@@ -617,8 +617,9 @@ export class UIScene extends Phaser.Scene {
     const statusText = data.victory ? 'NETWORK SECURED' : 'NETWORK BREACHED';
     const statusColor = data.victory ? '#5EA500' : '#D9534F';
 
-    // Dark overlay
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.85);
+    // Fully opaque overlay — hides all game elements behind the report
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0a1628, 1);
+    overlay.setDepth(9000);
 
     // === INCIDENT REPORT HEADER ===
     this.add.text(640, 40, 'INCIDENT REPORT', {

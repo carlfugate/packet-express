@@ -9,9 +9,9 @@ export const TOWERS: TowerConfig[] = [
     targetingMode: 'first',
     canHitLegitimate: false,
     upgrades: [
-      { level: 1, damage: 20, range: 120, fireRate: 1000, description: 'Basic ACL rules' },
-      { level: 2, damage: 35, range: 140, fireRate: 850, description: 'Stateful inspection' },
-      { level: 3, damage: 55, range: 160, fireRate: 700, description: 'Next-gen deep packet inspection' },
+      { level: 1, damage: 22, range: 130, fireRate: 1000, description: 'Basic ACL rules' },
+      { level: 2, damage: 38, range: 150, fireRate: 850, description: 'Stateful inspection' },
+      { level: 3, damage: 60, range: 170, fireRate: 700, description: 'Next-gen deep packet inspection' },
     ],
   },
   {
@@ -85,13 +85,13 @@ export const TOWERS: TowerConfig[] = [
     id: 'data_diode',
     name: 'Data Diode',
     description: 'One-way network gateway. Allows whitelisted OT traffic through, blocks everything else entering the OT zone.',
-    cost: 300,
+    cost: 350,
     targetingMode: 'first',
     canHitLegitimate: false,
     upgrades: [
-      { level: 1, damage: 25, range: 100, fireRate: 900, description: 'Basic unidirectional gateway' },
-      { level: 2, damage: 45, range: 120, fireRate: 750, description: 'Protocol-aware filtering' },
-      { level: 3, damage: 70, range: 140, fireRate: 600, description: 'Full DPI with allowlist enforcement' },
+      { level: 1, damage: 18, range: 85, fireRate: 900, description: 'Basic unidirectional gateway' },
+      { level: 2, damage: 30, range: 100, fireRate: 750, description: 'Protocol-aware filtering' },
+      { level: 3, damage: 48, range: 115, fireRate: 600, description: 'Full DPI with allowlist enforcement' },
     ],
   },
   {

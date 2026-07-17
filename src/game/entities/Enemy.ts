@@ -31,17 +31,19 @@ export class Enemy extends Phaser.GameObjects.Container {
     scene: Phaser.Scene,
     config: EnemyConfig,
     waveNumber: number,
-    waypoints: Array<{ x: number; y: number }>
+    waypoints: Array<{ x: number; y: number }>,
+    healthOverride?: number,
+    speedOverride?: number
   ) {
     const spawn = waypoints[0];
     super(scene, spawn.x, spawn.y);
 
     this.config = config;
     this.waypoints = waypoints;
-    this.maxHealth = getScaledHealth(config.health, waveNumber);
+    this.maxHealth = healthOverride ?? getScaledHealth(config.health, waveNumber);
     this.currentHealth = this.maxHealth;
-    this.baseSpeed = config.speed;
-    this.speed = config.speed;
+    this.baseSpeed = speedOverride ?? config.speed;
+    this.speed = this.baseSpeed;
     this.isLegitimate = config.type === 'legitimate';
 
     this.sprite = scene.add.image(0, 0, `enemy_${config.id}`);

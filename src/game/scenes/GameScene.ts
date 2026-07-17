@@ -8,11 +8,10 @@ import { MapRenderer } from '../systems/MapRenderer';
 import { AbilitySystem } from '../systems/AbilitySystem';
 import { MAP_DATA } from '../data/maps';
 import { TOWERS } from '../data/towers';
-import { GAME_CONFIG } from '../config';
+import { GAME_CONFIG, DifficultyConfig, DIFFICULTIES } from '../config';
 import { ScoreState } from '../types';
 import {
   calculateKillScore,
-  applyFalsePositivePenalty,
   calculateAccuracy,
   calculateLegitDeliveryBonus,
   calculateWaveBonus,
@@ -47,14 +46,25 @@ export class GameScene extends Phaser.Scene {
   private otDamageOccurred: boolean = false;
   private abilitiesUsed: number = 0;
 
+  // Difficulty
+  private difficulty: DifficultyConfig = DIFFICULTIES[1];
+
   constructor() {
     super({ key: 'Game' });
   }
 
+  init(data: { difficulty?: DifficultyConfig }): void {
+    if (data?.difficulty) {
+      this.difficulty = data.difficulty;
+    } else {
+      this.difficulty = DIFFICULTIES[1]; // default normal
+    }
+  }
+
   create(): void {
     // Reset state for replays
-    this.credits = GAME_CONFIG.startingMoney;
-    this.bandwidth = GAME_CONFIG.lives;
+    this.credits = this.difficulty.startingCredits;
+    this.bandwidth = this.difficulty.startingBandwidth;
     this.gameOver = false;
     this.paused = false;
     this.gameSpeed = 1;
@@ -82,7 +92,7 @@ export class GameScene extends Phaser.Scene {
     this.mapRenderer.drawTrack(MAP_DATA.waypoints);
     this.mapRenderer.drawTowerSlots(MAP_DATA.towerSlots);
 
-    this.waveManager = new WaveManager(this);
+    this.waveManager = new WaveManager(this, this.difficulty);
     this.buildSystem = new BuildSystem(this);
     this.abilitySystem = new AbilitySystem(this);
 
@@ -169,8 +179,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   // --- Event handlers ---
-  private handleSpawnEnemy(data: { type: string; config: typeof TOWERS extends (infer T)[] ? T : never; wave: number } & Record<string, unknown>): void {
-    const enemy = new Enemy(this, data.config as any, this.waveManager.getCurrentWave(), MAP_DATA.waypoints);
+  private handleSpawnEnemy(data: { type: string; config: typeof TOWERS extends (infer T)[] ? T : never; wave: number; health?: number; speed?: number } & Record<string, unknown>): void {
+    const enemy = new Enemy(this, data.config as any, this.waveManager.getCurrentWave(), MAP_DATA.waypoints, data.health, data.speed);
     this.enemies.push(enemy);
 
     // Listen for enemy events on the instance
@@ -182,7 +192,9 @@ export class GameScene extends Phaser.Scene {
     if (config.type === 'legitimate') {
       // FALSE POSITIVE
       this.scoreState.falsePositives++;
-      this.scoreState.score = applyFalsePositivePenalty(this.scoreState.score, config.id);
+      const basePenalty = config.falsePositivePenalty || 200;
+      const adjustedPenalty = Math.round(basePenalty * this.difficulty.falsePositivePenaltyMultiplier);
+      this.scoreState.score = Math.max(0, this.scoreState.score - adjustedPenalty);
       this.scoreState.accuracy = calculateAccuracy(this.scoreState.threatsKilled, this.scoreState.falsePositives);
       // Track tower false positive
       if (lastHitBy) {
@@ -245,7 +257,7 @@ export class GameScene extends Phaser.Scene {
       this.endGame(true);
     } else {
       // Auto-start next wave after delay
-      this.time.delayedCall(5000, () => {
+      this.time.delayedCall(this.difficulty.waveDelay, () => {
         if (!this.gameOver) this.waveManager.startWave();
       });
     }
@@ -399,6 +411,7 @@ export class GameScene extends Phaser.Scene {
       otDamageOccurred: this.otDamageOccurred,
       abilitiesUsed: this.abilitiesUsed,
       towersPlaced: this.towers.map((t) => t.config.id),
+      difficulty: this.difficulty,
     });
   }
 

@@ -139,6 +139,7 @@ export class HelpScene extends Phaser.Scene {
   private buildPages(): HelpPage[] {
     return [
       { title: 'OBJECTIVE', content: (s) => s.buildObjectivePage() },
+      { title: 'DIFFICULTY MODES', content: (s) => s.buildDifficultyPage() },
       { title: 'TOWERS', content: (s) => s.buildTowersPage() },
       { title: 'ENEMIES', content: (s) => s.buildEnemiesPage() },
       { title: 'SCORING', content: (s) => s.buildScoringPage() },
@@ -214,6 +215,44 @@ export class HelpScene extends Phaser.Scene {
     items.push(this.add.text(545, legendY + 30, 'Legitimate \u2014 Let these through!', {
       fontSize: '15px', color: '#84BD00', fontFamily: 'Arial',
     }).setOrigin(0, 0.5));
+
+    return items;
+  }
+
+  private buildDifficultyPage(): Phaser.GameObjects.GameObject[] {
+    const items: Phaser.GameObjects.GameObject[] = [];
+    const x = 640;
+    let y = 160;
+
+    items.push(this.add.text(x, y, 'Choose your challenge level from the menu.', {
+      fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial',
+    }).setOrigin(0.5));
+    y += 60;
+
+    const modes = [
+      { name: 'ANALYST', color: '#5EA500', desc: 'More resources, slower enemies, reduced penalties. Great for learning.' },
+      { name: 'ENGINEER', color: '#E7D747', desc: 'Standard tempo. The intended experience.' },
+      { name: 'INCIDENT COMMANDER', color: '#D9534F', desc: 'Faster threats, tight budget, amplified penalties. For veterans.' },
+    ];
+
+    modes.forEach((mode) => {
+      items.push(this.add.text(x, y, mode.name, {
+        fontSize: '22px', color: mode.color, fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5));
+      y += 30;
+
+      items.push(this.add.text(x, y, mode.desc, {
+        fontSize: '15px', color: '#B6B7B9', fontFamily: 'Arial',
+        wordWrap: { width: 600 },
+      }).setOrigin(0.5));
+      y += 60;
+    });
+
+    y += 20;
+    items.push(this.add.text(x, y, 'Difficulty affects: enemy count, speed, health, starting resources, and FP penalties.', {
+      fontSize: '14px', color: '#0093B2', fontFamily: 'Arial', fontStyle: 'italic',
+      wordWrap: { width: 600 },
+    }).setOrigin(0.5));
 
     return items;
   }

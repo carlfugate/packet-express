@@ -2,9 +2,12 @@ import { WAVES } from '../data/waves';
 import { ENEMIES } from '../data/enemies';
 import type { Wave, WaveEntry, EnemyConfig } from '../types';
 import { getScaledHealth, calculateSpawnDelay, getWaveEnemyCount } from '../logic/waves';
+import type { DifficultyConfig } from '../config';
+import { DIFFICULTIES } from '../config';
 
 export class WaveManager {
   private scene: Phaser.Scene;
+  private difficulty: DifficultyConfig;
   private currentWave: number = 0;
   private spawning: boolean = false;
   private spawnQueue: Array<{ type: string; delay: number }> = [];
@@ -14,8 +17,9 @@ export class WaveManager {
   private totalEnemiesInWave: number = 0;
   private enemyConfigMap: Record<string, EnemyConfig>;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, difficulty?: DifficultyConfig) {
     this.scene = scene;
+    this.difficulty = difficulty ?? DIFFICULTIES[1];
     this.enemyConfigMap = {};
     for (const enemy of ENEMIES) {
       this.enemyConfigMap[enemy.id] = enemy;
@@ -28,7 +32,7 @@ export class WaveManager {
 
     this.currentWave++;
     const wave = WAVES[this.currentWave - 1];
-    this.totalEnemiesInWave = getWaveEnemyCount(wave);
+    this.totalEnemiesInWave = this.getAdjustedEnemyCount(wave);
     this.enemiesSpawned = 0;
     this.enemiesAlive = 0;
     this.spawning = true;
@@ -36,6 +40,12 @@ export class WaveManager {
     this.buildSpawnQueue(wave);
     this.scene.events.emit('wave-start', { wave: this.currentWave });
     this.spawnNext();
+  }
+
+  private getAdjustedEnemyCount(wave: Wave): number {
+    return wave.enemies.reduce((sum, entry) => {
+      return sum + Math.ceil(entry.count * this.difficulty.enemyCountMultiplier);
+    }, 0);
   }
 
   private buildSpawnQueue(wave: Wave): void {
@@ -46,7 +56,8 @@ export class WaveManager {
     for (const entry of wave.enemies) {
       const queue: Array<{ type: string; delay: number }> = [];
       const delay = calculateSpawnDelay(entry, wave.wave);
-      for (let i = 0; i < entry.count; i++) {
+      const adjustedCount = Math.ceil(entry.count * this.difficulty.enemyCountMultiplier);
+      for (let i = 0; i < adjustedCount; i++) {
         queue.push({ type: entry.type, delay });
       }
       typeQueues.push(queue);
@@ -78,7 +89,8 @@ export class WaveManager {
       return;
     }
 
-    const scaledHealth = getScaledHealth(config.health, this.currentWave);
+    const scaledHealth = Math.round(getScaledHealth(config.health, this.currentWave) * this.difficulty.healthMultiplier);
+    const adjustedSpeed = Math.round(config.speed * this.difficulty.speedMultiplier);
     this.enemiesSpawned++;
     this.enemiesAlive++;
 
@@ -86,6 +98,7 @@ export class WaveManager {
       type: item.type,
       config,
       health: scaledHealth,
+      speed: adjustedSpeed,
       wave: this.currentWave,
     });
 
@@ -147,7 +160,8 @@ export class WaveManager {
     for (const entry of wave.enemies) {
       const config = this.enemyConfigMap[entry.type];
       const name = config ? config.name : entry.type;
-      parts.push(`${entry.count}x ${name}`);
+      const adjustedCount = Math.ceil(entry.count * this.difficulty.enemyCountMultiplier);
+      parts.push(`${adjustedCount}x ${name}`);
     }
     return `Wave ${wave.wave}: ${parts.join(', ')}`;
   }

@@ -599,6 +599,7 @@ export class UIScene extends Phaser.Scene {
     otDamageOccurred?: boolean;
     abilitiesUsed?: number;
     towersPlaced?: string[];
+    difficulty?: { name: string };
   }): void {
     const scoreState = data.scoreState;
     const accuracy = calculateAccuracy(scoreState.threatsKilled, scoreState.falsePositives);
@@ -606,6 +607,7 @@ export class UIScene extends Phaser.Scene {
     const baseScore = scoreState.score;
     const towerStats = data.towerStats ?? {};
     const towersPlaced = data.towersPlaced ?? [];
+    const difficultyName = data.difficulty?.name ?? 'Engineer';
 
     let multiplierLabel: string;
     if (accuracy >= 1.0) multiplierLabel = '1.5x';
@@ -614,7 +616,7 @@ export class UIScene extends Phaser.Scene {
     else if (accuracy >= 0.5) multiplierLabel = '0.7x';
     else multiplierLabel = '0.5x';
 
-    const statusText = data.victory ? 'NETWORK SECURED' : 'NETWORK BREACHED';
+    const statusText = data.victory ? `NETWORK SECURED (${difficultyName})` : `NETWORK BREACHED (${difficultyName})`;
     const statusColor = data.victory ? '#5EA500' : '#D9534F';
 
     // Fully opaque overlay — hides all game elements behind the report
@@ -770,7 +772,7 @@ export class UIScene extends Phaser.Scene {
     btnBg.on('pointerdown', () => {
       this.scene.stop('UI');
       this.scene.stop('Game');
-      this.scene.start('Game');
+      this.scene.start('Menu');
     });
 
     // Pulsing animation on button

@@ -56,7 +56,7 @@ export class Enemy extends Phaser.GameObjects.Container {
       fontSize: '8px',
       color: this.isLegitimate ? '#84BD00' : '#D9534F',
       fontFamily: 'monospace',
-    }).setOrigin(0.5).setAlpha(0.7);
+    }).setOrigin(0.5).setAlpha(0.8);
     this.add(this.label);
 
     // Hide label for stealth enemies until revealed

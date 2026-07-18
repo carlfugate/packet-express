@@ -25,13 +25,13 @@ export class MapRenderer {
     const bg = this.scene.add.graphics();
     bg.setDepth(-10);
 
-    // Solid dark navy background
-    bg.fillStyle(0x0a1628, 1);
+    // Nearly black background
+    bg.fillStyle(0x030810, 1);
     bg.fillRect(0, 0, 1280, 720);
 
-    // Subtle dashed grid — control system display aesthetic
-    const gridSpacing = 60;
-    bg.lineStyle(1, 0x0076a8, 0.08);
+    // Very dim gray grid
+    const gridSpacing = 40;
+    bg.lineStyle(1, 0x1a1a2e, 0.06);
 
     for (let x = 0; x < 1280; x += gridSpacing) {
       this.drawDashedLine(bg, x, 0, x, 720, 4, 8);
@@ -81,18 +81,8 @@ export class MapRenderer {
 
     const boundaryIndex = GAME_CONFIG.otZone.boundaryWaypointIndex;
 
-    // Draw main track: thin 3px light gray line
-    g.lineStyle(3, 0xaaaaaa, 1);
-    g.beginPath();
-    g.moveTo(waypoints[0].x, waypoints[0].y);
-    for (let i = 1; i < waypoints.length; i++) {
-      g.lineTo(waypoints[i].x, waypoints[i].y);
-    }
-    g.strokePath();
-
-    // Segment coloring overlays
-    // IT zone (first half): green tint
-    g.lineStyle(3, 0x84bd00, 0.3);
+    // IT zone: bright green active track at 2px
+    g.lineStyle(2, 0x00cc66, 1);
     g.beginPath();
     g.moveTo(waypoints[0].x, waypoints[0].y);
     for (let i = 1; i <= boundaryIndex && i < waypoints.length; i++) {
@@ -100,9 +90,9 @@ export class MapRenderer {
     }
     g.strokePath();
 
-    // OT zone (second half): amber tint
+    // OT zone: bright amber active track at 2px
     if (boundaryIndex < waypoints.length) {
-      g.lineStyle(3, 0xf47f28, 0.2);
+      g.lineStyle(2, 0xff9900, 1);
       g.beginPath();
       g.moveTo(waypoints[boundaryIndex].x, waypoints[boundaryIndex].y);
       for (let i = boundaryIndex + 1; i < waypoints.length; i++) {
@@ -113,6 +103,9 @@ export class MapRenderer {
 
     // Flow direction arrows along the track
     this.drawFlowArrows(g, waypoints, boundaryIndex);
+
+    // Dense decorative track infrastructure
+    this.drawDecorativeTracks(g);
 
     // Signal dots at waypoints
     this.drawSignalDots(waypoints);
@@ -130,13 +123,221 @@ export class MapRenderer {
     this.addDataFlowParticles(waypoints, boundaryIndex);
   }
 
+  private drawDecorativeTracks(g: Phaser.GameObjects.Graphics): void {
+    // Seeded pseudo-random for consistent visuals between frames
+    const seed = 42;
+    const rng = (i: number): number => {
+      const x = Math.sin(seed + i * 9301 + 49297) * 49297;
+      return x - Math.floor(x);
+    };
+
+    // --- Between runs 1 and 2 (y=100 to y=240) ---
+    const band1Lines = [130, 160, 190];
+    for (let li = 0; li < band1Lines.length; li++) {
+      const y = band1Lines[li];
+      const startX = 100 + rng(li * 10) * 200;
+      const endX = 900 + rng(li * 10 + 1) * 200;
+      g.lineStyle(1, 0x444444, 0.5);
+      g.beginPath();
+      g.moveTo(startX, y);
+      g.lineTo(endX, y);
+      g.strokePath();
+
+      // Siding branches (short stubs at 30 degrees)
+      for (let s = 0; s < 3; s++) {
+        const sx = startX + (endX - startX) * (0.2 + s * 0.3);
+        const dir = rng(li * 100 + s) > 0.5 ? 1 : -1;
+        const stubLen = 40 + rng(li * 100 + s + 50) * 20;
+        const angle = (dir * Math.PI) / 6;
+        g.lineStyle(1, 0x444444, 0.4);
+        g.beginPath();
+        g.moveTo(sx, y);
+        g.lineTo(sx + Math.cos(angle) * stubLen, y + Math.sin(angle) * stubLen);
+        g.strokePath();
+      }
+
+      // Switch junction marks
+      const jx = startX + 20;
+      g.lineStyle(1.5, 0x555555, 0.5);
+      g.beginPath();
+      g.moveTo(jx, y - 4);
+      g.lineTo(jx + 6, y);
+      g.lineTo(jx, y + 4);
+      g.strokePath();
+    }
+
+    // Signal triangles between runs 1 and 2
+    this.drawDecorativeSignals(g, 150, 900, 120, 200, 5, 0);
+
+    // --- Between runs 2 and 3 (y=240 to y=380) ---
+    const band2Lines = [270, 295, 320, 345];
+    for (let li = 0; li < band2Lines.length; li++) {
+      const y = band2Lines[li];
+      const startX = 80 + rng(li * 20 + 100) * 150;
+      const endX = 950 + rng(li * 20 + 101) * 150;
+      g.lineStyle(1.5, 0x555555, 0.5);
+      g.beginPath();
+      g.moveTo(startX, y);
+      g.lineTo(endX, y);
+      g.strokePath();
+
+      // Cross-connections between adjacent parallels
+      if (li < band2Lines.length - 1) {
+        for (let c = 0; c < 2; c++) {
+          const cx = startX + (endX - startX) * (0.3 + c * 0.4);
+          g.lineStyle(1, 0x444444, 0.4);
+          g.beginPath();
+          g.moveTo(cx, y);
+          g.lineTo(cx + 30, band2Lines[li + 1]);
+          g.strokePath();
+        }
+      }
+    }
+
+    // Station labels in band 2
+    const stationLabels = [
+      { x: 300, y: 270, text: 'SIG-04' },
+      { x: 600, y: 320, text: 'JCT-B' },
+      { x: 900, y: 295, text: 'XOVER-2' },
+    ];
+    for (const sl of stationLabels) {
+      const label = this.scene.add.text(sl.x, sl.y - 10, sl.text, {
+        fontSize: '8px',
+        color: '#555555',
+        fontFamily: 'monospace',
+      });
+      label.setDepth(-4);
+    }
+
+    // Signal triangles between runs 2 and 3
+    this.drawDecorativeSignals(g, 120, 1000, 260, 355, 8, 200);
+
+    // --- Between runs 3 and 4 (y=380 to y=520) ---
+    const band3Lines = [420, 450, 480];
+    for (let li = 0; li < band3Lines.length; li++) {
+      const y = band3Lines[li];
+      const startX = 120 + rng(li * 30 + 200) * 180;
+      const endX = 850 + rng(li * 30 + 201) * 200;
+
+      // Some lines highlighted in dim red (blocked routes)
+      const isBlocked = li === 1;
+      if (isBlocked) {
+        g.lineStyle(1.5, 0x8b0000, 0.3);
+      } else {
+        g.lineStyle(1, 0x444444, 0.5);
+      }
+      g.beginPath();
+      g.moveTo(startX, y);
+      g.lineTo(endX, y);
+      g.strokePath();
+
+      // Dead-end sidings with buffer-stop (T-shape at end)
+      if (li === 0 || li === 2) {
+        const bufX = endX + 40;
+        g.lineStyle(1, 0x444444, 0.4);
+        g.beginPath();
+        g.moveTo(endX, y);
+        g.lineTo(bufX, y);
+        g.strokePath();
+        // T-shape buffer stop
+        g.lineStyle(2, 0x555555, 0.5);
+        g.beginPath();
+        g.moveTo(bufX, y - 5);
+        g.lineTo(bufX, y + 5);
+        g.strokePath();
+      }
+    }
+
+    // Signal triangles between runs 3 and 4
+    this.drawDecorativeSignals(g, 150, 900, 410, 490, 6, 400);
+
+    // --- Left and right edge stubs ---
+    // Left edge vertical stubs
+    const leftStubYs = [150, 310, 460];
+    for (const sy of leftStubYs) {
+      g.lineStyle(1, 0x444444, 0.4);
+      g.beginPath();
+      g.moveTo(0, sy);
+      g.lineTo(60, sy);
+      g.strokePath();
+      // Arrow pointing off-edge (left)
+      g.fillStyle(0x444444, 0.4);
+      g.beginPath();
+      g.moveTo(0, sy);
+      g.lineTo(8, sy - 3);
+      g.lineTo(8, sy + 3);
+      g.closePath();
+      g.fillPath();
+    }
+
+    // Right edge vertical stubs
+    const rightStubYs = [170, 330, 440];
+    for (const sy of rightStubYs) {
+      g.lineStyle(1, 0x444444, 0.4);
+      g.beginPath();
+      g.moveTo(1220, sy);
+      g.lineTo(1280, sy);
+      g.strokePath();
+      // Arrow pointing off-edge (right)
+      g.fillStyle(0x444444, 0.4);
+      g.beginPath();
+      g.moveTo(1280, sy);
+      g.lineTo(1272, sy - 3);
+      g.lineTo(1272, sy + 3);
+      g.closePath();
+      g.fillPath();
+    }
+  }
+
+  private drawDecorativeSignals(
+    g: Phaser.GameObjects.Graphics,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number,
+    count: number,
+    seedOffset: number,
+  ): void {
+    const rng = (i: number): number => {
+      const x = Math.sin(seedOffset + i * 7919 + 31337) * 49297;
+      return x - Math.floor(x);
+    };
+
+    for (let i = 0; i < count; i++) {
+      const sx = minX + rng(i * 2) * (maxX - minX);
+      const sy = minY + rng(i * 2 + 1) * (maxY - minY);
+      const isGreen = rng(i * 3) > 0.5;
+
+      // Small triangle signal (6px)
+      if (isGreen) {
+        g.fillStyle(0x2e8b57, 0.5);
+      } else {
+        g.fillStyle(0x8b2500, 0.4);
+      }
+      g.beginPath();
+      g.moveTo(sx, sy - 3);
+      g.lineTo(sx + 3, sy + 3);
+      g.lineTo(sx - 3, sy + 3);
+      g.closePath();
+      g.fillPath();
+
+      // Small dot at some positions
+      if (rng(i * 4) > 0.6) {
+        const dotColor = isGreen ? 0x2e8b57 : 0x8b2500;
+        const dotAlpha = isGreen ? 0.5 : 0.4;
+        g.fillStyle(dotColor, dotAlpha);
+        g.fillCircle(sx + 10, sy, 1.5);
+      }
+    }
+  }
+
   private drawFlowArrows(
     g: Phaser.GameObjects.Graphics,
     waypoints: Array<{ x: number; y: number }>,
     boundaryIndex: number,
   ): void {
     const arrowSpacing = 80;
-    const arrowSize = 8;
+    const arrowSize = 10;
 
     for (let i = 0; i < waypoints.length - 1; i++) {
       const a = waypoints[i];
@@ -148,8 +349,8 @@ export class MapRenderer {
       const uy = dy / segDist;
 
       const inOT = i >= boundaryIndex;
-      const color = inOT ? 0xf47f28 : 0x84bd00;
-      g.fillStyle(color, 0.7);
+      const color = inOT ? 0xff9900 : 0x00cc66;
+      g.fillStyle(color, 1);
 
       let d = arrowSpacing / 2;
       while (d < segDist - arrowSpacing / 4) {
@@ -253,49 +454,42 @@ export class MapRenderer {
 
     const boundaryY = waypoints[boundaryIndex].y;
 
-    // Thin dashed hazard stripe: alternating yellow/black 2px segments
-    const segWidth = 12;
-    for (let x = 0; x < 1280; x += segWidth * 2) {
-      // Yellow segment
-      g.lineStyle(2, 0xe7d747, 0.6);
-      g.beginPath();
-      g.moveTo(x, boundaryY);
-      g.lineTo(x + segWidth, boundaryY);
-      g.strokePath();
+    // Single amber dashed line across full width
+    g.lineStyle(1, 0xff9900, 0.6);
+    this.drawDashedLine(g, 0, boundaryY, 1280, boundaryY, 8, 4);
 
-      // Black segment
-      g.lineStyle(2, 0x000000, 0.6);
-      g.beginPath();
-      g.moveTo(x + segWidth, boundaryY);
-      g.lineTo(x + segWidth * 2, boundaryY);
-      g.strokePath();
-    }
+    // DMZ label centered
+    const dmzLabel = this.scene.add.text(640, boundaryY - 10, 'DMZ', {
+      fontSize: '8px',
+      color: '#FF9900',
+      fontFamily: 'Arial',
+    });
+    dmzLabel.setOrigin(0.5, 0.5);
+    dmzLabel.setDepth(0);
   }
 
   private addZoneLabels(): void {
-    // IT NETWORK label at top-left
-    const itLabel = this.scene.add.text(40, 65, 'IT NETWORK', {
-      fontSize: '11px',
-      color: '#0093B2',
+    // IT NETWORK label at top-left of active track
+    const itLabel = this.scene.add.text(50, 85, 'IT NETWORK', {
+      fontSize: '10px',
+      color: '#00CC66',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     });
     itLabel.setDepth(0);
-    itLabel.setAlpha(0.6);
 
     // OT / INDUSTRIAL label at boundary
     const boundaryIndex = GAME_CONFIG.otZone.boundaryWaypointIndex;
     const boundaryY =
       boundaryIndex < MAP_DATA.waypoints.length ? MAP_DATA.waypoints[boundaryIndex].y : 380;
 
-    const otLabel = this.scene.add.text(40, boundaryY + 8, 'OT / INDUSTRIAL', {
-      fontSize: '11px',
-      color: '#F47F28',
+    const otLabel = this.scene.add.text(50, boundaryY + 8, 'OT / INDUSTRIAL', {
+      fontSize: '10px',
+      color: '#FF9900',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     });
     otLabel.setDepth(0);
-    otLabel.setAlpha(0.6);
   }
 
   private addDataFlowParticles(
@@ -303,7 +497,7 @@ export class MapRenderer {
     boundaryIndex: number,
   ): void {
     const particleCount = 10;
-    const threatParticleCount = 2;
+    const threatParticleCount = 3;
     const path = new Phaser.Curves.Path(waypoints[0].x, waypoints[0].y);
     for (let i = 1; i < waypoints.length; i++) {
       path.lineTo(waypoints[i].x, waypoints[i].y);
@@ -325,9 +519,9 @@ export class MapRenderer {
     }
     const boundaryT = totalLength > 0 ? boundaryLength / totalLength : 0.5;
 
-    // Normal data flow particles
+    // Normal data flow particles — dimmer (0.4 alpha)
     for (let p = 0; p < particleCount; p++) {
-      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0x84bd00, 0.8);
+      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0x00cc66, 0.4);
       dot.setDepth(1);
 
       const follower = { t: 0, vec: new Phaser.Math.Vector2() };
@@ -342,31 +536,30 @@ export class MapRenderer {
           dot.setPosition(follower.vec.x, follower.vec.y);
           // Color based on zone
           if (follower.t > boundaryT) {
-            dot.setFillStyle(0xf47f28, 0.8); // Amber in OT zone
+            dot.setFillStyle(0xff9900, 0.4); // Amber in OT zone
           } else {
-            dot.setFillStyle(0x84bd00, 0.8); // Green in IT zone
+            dot.setFillStyle(0x00cc66, 0.4); // Green in IT zone
           }
         },
       });
     }
 
-    // Occasional red threat traffic particles (purely cosmetic)
+    // Red threat traffic particles — fast, every ~3 seconds
     for (let p = 0; p < threatParticleCount; p++) {
-      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0xff3333, 0.6);
+      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0xff3333, 0.4);
       dot.setDepth(1);
 
       const follower = { t: 0, vec: new Phaser.Math.Vector2() };
       this.scene.tweens.add({
         targets: follower,
         t: 1,
-        duration: 8000,
+        duration: 4000,
         repeat: -1,
-        delay: 3000 + p * 5000,
+        delay: 3000 * p,
         onUpdate: () => {
           path.getPoint(follower.t, follower.vec);
           dot.setPosition(follower.vec.x, follower.vec.y);
-          // Pulse alpha for threat feel
-          dot.setAlpha(0.3 + Math.sin(follower.t * Math.PI * 4) * 0.3);
+          dot.setAlpha(0.3 + Math.sin(follower.t * Math.PI * 4) * 0.2);
         },
       });
     }
@@ -382,28 +575,19 @@ export class MapRenderer {
     const cornerRadius = 4;
 
     for (const slot of slots) {
-      // Thin rectangular outline with rounded corners
-      g.lineStyle(1, 0x0093b2, 0.4);
+      // Subtle dim gray outline only — no fill
+      g.lineStyle(1, 0x333333, 0.5);
       g.strokeRoundedRect(slot.x - half, slot.y - half, slotSize, slotSize, cornerRadius);
 
-      // Small "+" in center at 0.3 alpha
-      g.lineStyle(1, 0x0093b2, 0.3);
-      g.beginPath();
-      g.moveTo(slot.x, slot.y - 6);
-      g.lineTo(slot.x, slot.y + 6);
-      g.moveTo(slot.x - 6, slot.y);
-      g.lineTo(slot.x + 6, slot.y);
-      g.strokePath();
-
-      // Station label below each slot
+      // Station label below each slot — very subtle
       const slotIndex = parseInt(slot.id.replace('slot_', ''), 10);
       const label = this.scene.add.text(
         slot.x,
         slot.y + half + 4,
         `NODE-${String(slotIndex).padStart(2, '0')}`,
         {
-          fontSize: '9px',
-          color: '#7A7B7C',
+          fontSize: '7px',
+          color: '#444444',
           fontFamily: 'Arial',
         },
       );

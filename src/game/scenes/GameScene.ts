@@ -15,10 +15,12 @@ import {
   calculateAccuracy,
   calculateLegitDeliveryBonus,
   calculateWaveBonus,
+  calculateFinalScore,
 } from '../logic/scoring';
 import { calculateWaveClearBonus } from '../logic/economy';
 import type { WaveModifier, ModifierContext } from '../data/modifiers';
 import { createDefaultModifierContext } from '../data/modifiers';
+import { Analytics } from '../systems/Analytics';
 
 export class GameScene extends Phaser.Scene {
   // State
@@ -131,6 +133,8 @@ export class GameScene extends Phaser.Scene {
 
     // Expose for E2E testing
     (window as unknown as Record<string, unknown>).__GAME_STATE__ = this.getGameState();
+
+    Analytics.gameStart(this.difficulty.id);
 
     // Start first wave after brief delay
     this.time.delayedCall(2000, () => this.waveManager.startWave());
@@ -261,6 +265,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleWaveComplete(): void {
     const waveNum = this.waveManager.getCurrentWave();
+    Analytics.waveReached(waveNum, this.difficulty.id);
     const clearBonus = Math.round(calculateWaveClearBonus(waveNum) * this.modifierContext.creditMultiplier);
     const waveScoreBonus = Math.round(calculateWaveBonus(waveNum) * this.modifierContext.scoreMultiplier);
     this.credits += clearBonus;
@@ -288,6 +293,7 @@ export class GameScene extends Phaser.Scene {
       this.events.emit('show-modifiers', { wave: waveNum });
       // Listen for modifier selection
       this.events.once('modifier-selected', (mod: WaveModifier) => {
+        Analytics.modifierChosen(mod.id);
         this.applyModifier(mod);
         this.startNextWaveAfterDelay();
       });
@@ -322,6 +328,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleTowerPlaced(data: { slotId: string; towerId: string; config: any; level: number }): void {
     this.credits -= data.config.cost;
+    Analytics.towerPlaced(data.towerId);
     const slot = MAP_DATA.towerSlots.find((s) => s.id === data.slotId);
     if (!slot) return;
     const tower = new Tower(this, slot.x, slot.y, data.config, data.slotId);
@@ -335,6 +342,7 @@ export class GameScene extends Phaser.Scene {
       const used = this.abilitySystem.use(targetingAbility, this.enemies, { x: pointer.worldX, y: pointer.worldY });
       if (used) {
         this.abilitiesUsed++;
+        Analytics.abilityUsed(targetingAbility);
       }
       this.abilitySystem.setTargetingMode(null);
       this.events.emit('ability-targeting-cancelled');
@@ -461,12 +469,14 @@ export class GameScene extends Phaser.Scene {
     const used = this.abilitySystem.use(abilityId, this.enemies);
     if (used) {
       this.abilitiesUsed++;
+      Analytics.abilityUsed(abilityId);
     }
     return used;
   }
 
   private endGame(victory: boolean): void {
     this.gameOver = true;
+    Analytics.gameOver(victory, calculateFinalScore(this.scoreState), this.scoreState.currentWave, this.scoreState.accuracy, this.difficulty.id);
     this.events.emit('game-over', {
       victory,
       scoreState: this.scoreState,

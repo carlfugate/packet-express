@@ -570,24 +570,40 @@ export class MapRenderer {
     g.clear();
     g.setDepth(-2);
 
-    const slotSize = 36;
+    const slotSize = 40;
     const half = slotSize / 2;
     const cornerRadius = 4;
 
     for (const slot of slots) {
-      // Subtle dim gray outline only — no fill
-      g.lineStyle(1, 0x333333, 0.5);
+      // Subtle teal fill so slots read as interactive zones
+      g.fillStyle(0x0093b2, 0.08);
+      g.fillRoundedRect(slot.x - half, slot.y - half, slotSize, slotSize, cornerRadius);
+
+      // Teal border — visible but not overwhelming
+      g.lineStyle(1.5, 0x0093b2, 0.6);
       g.strokeRoundedRect(slot.x - half, slot.y - half, slotSize, slotSize, cornerRadius);
 
-      // Station label below each slot — very subtle
+      // "+" icon in center — brighter teal
+      const plusSize = 8;
+      g.lineStyle(1.5, 0x0093b2, 0.5);
+      g.beginPath();
+      g.moveTo(slot.x - plusSize / 2, slot.y);
+      g.lineTo(slot.x + plusSize / 2, slot.y);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(slot.x, slot.y - plusSize / 2);
+      g.lineTo(slot.x, slot.y + plusSize / 2);
+      g.strokePath();
+
+      // Station label below each slot
       const slotIndex = parseInt(slot.id.replace('slot_', ''), 10);
       const label = this.scene.add.text(
         slot.x,
         slot.y + half + 4,
         `NODE-${String(slotIndex).padStart(2, '0')}`,
         {
-          fontSize: '7px',
-          color: '#444444',
+          fontSize: '8px',
+          color: '#666666',
           fontFamily: 'Arial',
         },
       );
@@ -601,13 +617,13 @@ export class MapRenderer {
     const pos = this.slotPositions.get(slotId);
     if (!pos) return;
 
-    const slotSize = 36;
+    const slotSize = 40;
     const half = slotSize / 2;
     const cornerRadius = 4;
     const g = this.slotGraphics;
 
     // Brighten border to full teal
-    g.lineStyle(1, color, 1);
+    g.lineStyle(1.5, color, 1);
     g.strokeRoundedRect(pos.x - half, pos.y - half, slotSize, slotSize, cornerRadius);
   }
 

@@ -22,6 +22,7 @@ export class Enemy extends Phaser.GameObjects.Container {
 
   private healthBar: Phaser.GameObjects.Graphics;
   private sprite: Phaser.GameObjects.Image;
+  private label: Phaser.GameObjects.Text;
   private waypoints: Array<{ x: number; y: number }>;
   private currentWaypointIndex: number = 0;
   private slowEffects: Map<string, { factor: number; expires: number }> = new Map();
@@ -48,6 +49,20 @@ export class Enemy extends Phaser.GameObjects.Container {
 
     this.sprite = scene.add.image(0, 0, `enemy_${config.id}`);
     this.add(this.sprite);
+
+    // Add type abbreviation label below sprite
+    const labelText = this.getLabelText();
+    this.label = scene.add.text(0, 14, labelText, {
+      fontSize: '8px',
+      color: this.isLegitimate ? '#84BD00' : '#D9534F',
+      fontFamily: 'monospace',
+    }).setOrigin(0.5).setAlpha(0.7);
+    this.add(this.label);
+
+    // Hide label for stealth enemies until revealed
+    if (config.abilities.includes('stealth')) {
+      this.label.setVisible(false);
+    }
 
     this.healthBar = scene.add.graphics();
     this.add(this.healthBar);
@@ -151,6 +166,7 @@ export class Enemy extends Phaser.GameObjects.Container {
   reveal(): void {
     this.setAlpha(1);
     this.isRevealed = true;
+    this.label.setVisible(true);
     this.emit('enemy-revealed', this);
   }
 
@@ -277,5 +293,17 @@ export class Enemy extends Phaser.GameObjects.Container {
       total += Math.sqrt(dx * dx + dy * dy);
     }
     return total;
+  }
+
+  private getLabelText(): string {
+    const labels: Record<string, string> = {
+      malware: 'MLW', ddos: 'DDoS', phishing: 'PHI', sql_injection: 'SQLi',
+      ransomware_c2: 'RC2', zero_day: '0DAY', modbus_exploit: 'MBUS',
+      firmware_worm: 'FWRM', signal_jammer: 'JAM',
+      http_request: 'HTTP', dns_query: 'DNS', api_call: 'API', email: 'MAIL',
+      plc_heartbeat: 'PLC', scada_telemetry: 'SCDA', track_switch_cmd: 'TSWI',
+      train_position: 'TPOS',
+    };
+    return labels[this.config.id] || this.config.id.substring(0, 4).toUpperCase();
   }
 }

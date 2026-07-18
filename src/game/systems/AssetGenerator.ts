@@ -399,495 +399,467 @@ export class AssetGenerator {
   private static generateEnemyTextures(scene: Phaser.Scene): void {
     const size = 24;
 
-    // === THREATS (angular, warm colors, aggressive) ===
+    // === THREATS (train-car blocks, warm colors, angular) ===
 
-    // Malware: Red skull shape
+    // Malware: 3 connected red rectangular cars (7x5px each, 1px gap)
     this.createTexture(scene, 'enemy_malware', size, size, (g) => {
-      // Skull head (circle)
-      g.fillStyle(0xd9534f, 1);
-      g.fillCircle(12, 10, 8);
-      // Jaw
-      g.fillStyle(0xd9534f, 1);
-      g.beginPath();
-      g.moveTo(7, 14);
-      g.lineTo(7, 18);
-      g.lineTo(9, 20);
-      g.lineTo(12, 19);
-      g.lineTo(15, 20);
-      g.lineTo(17, 18);
-      g.lineTo(17, 14);
-      g.closePath();
-      g.fillPath();
-      // Eye sockets (dark)
-      g.fillStyle(0x000000, 1);
-      g.fillCircle(9, 9, 2.5);
-      g.fillCircle(15, 9, 2.5);
-      // Nose triangle
-      g.fillStyle(0x000000, 1);
-      g.beginPath();
-      g.moveTo(12, 11);
-      g.lineTo(10, 14);
-      g.lineTo(14, 14);
-      g.closePath();
-      g.fillPath();
-      // Border
-      g.lineStyle(1, 0xff6b6b, 1);
-      g.strokeCircle(12, 10, 8);
-    });
-
-    // DDoS: Small red dot with motion lines
-    this.createTexture(scene, 'enemy_ddos', size, size, (g) => {
-      // Motion lines behind
-      g.lineStyle(2, 0xd9534f, 0.5);
-      g.beginPath();
-      g.moveTo(3, 10);
-      g.lineTo(8, 10);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(2, 12);
-      g.lineTo(7, 12);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(3, 14);
-      g.lineTo(8, 14);
-      g.strokePath();
-      // Bright red dot
-      g.fillStyle(0xff0000, 1);
-      g.fillCircle(14, 12, 5);
-      // Hot core
-      g.fillStyle(0xffffff, 0.4);
-      g.fillCircle(13, 11, 2);
-      // Outer glow
-      g.lineStyle(1, 0xff5252, 0.6);
-      g.strokeCircle(14, 12, 7);
-    });
-
-    // Phishing: Green envelope with red hook
-    this.createTexture(scene, 'enemy_phishing', size, size, (g) => {
-      // Green envelope body
-      g.fillStyle(0x5ea500, 1);
-      g.fillRect(4, 8, 16, 11);
-      // Envelope flap
-      g.fillStyle(0x84bd00, 1);
-      g.beginPath();
-      g.moveTo(4, 8);
-      g.lineTo(12, 14);
-      g.lineTo(20, 8);
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(1, 0x3d7000, 1);
-      g.strokeRect(4, 8, 16, 11);
-      // Red hook sticking out of corner
-      g.lineStyle(2, 0xd9534f, 1);
-      g.beginPath();
-      g.moveTo(18, 8);
-      g.lineTo(20, 5);
-      g.arc(18, 4, 2, 0, Math.PI * 1.5, true);
-      g.strokePath();
-      // Hook barb
-      g.fillStyle(0xd9534f, 1);
-      g.beginPath();
-      g.moveTo(16, 5);
-      g.lineTo(15, 3);
-      g.lineTo(17, 4);
-      g.closePath();
-      g.fillPath();
-    });
-
-    // SQL Injection: Orange syringe
-    this.createTexture(scene, 'enemy_sql_injection', size, size, (g) => {
-      // Barrel
-      g.fillStyle(0xf47f28, 1);
-      g.fillRect(4, 9, 12, 6);
-      // Plunger handle
-      g.fillStyle(0xffa726, 1);
-      g.fillRect(1, 10, 4, 4);
-      // Needle tip
-      g.fillStyle(0xf47f28, 1);
-      g.beginPath();
-      g.moveTo(16, 9);
-      g.lineTo(22, 12);
-      g.lineTo(16, 15);
-      g.closePath();
-      g.fillPath();
-      // Needle point
-      g.lineStyle(2, 0xcccccc, 1);
-      g.beginPath();
-      g.moveTo(21, 12);
-      g.lineTo(24, 12);
-      g.strokePath();
-      // Barrel markings
-      g.lineStyle(1, 0xffffff, 0.5);
-      g.beginPath();
-      g.moveTo(8, 9);
-      g.lineTo(8, 15);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(12, 9);
-      g.lineTo(12, 15);
-      g.strokePath();
-      // Border
-      g.lineStyle(1, 0xcc5500, 1);
-      g.strokeRect(4, 9, 12, 6);
-    });
-
-    // Ransomware C2: Dark red/maroon padlock with skull
-    this.createTexture(scene, 'enemy_ransomware_c2', size, size, (g) => {
-      // Shackle
-      g.lineStyle(3, 0x600000, 1);
-      g.beginPath();
-      g.arc(12, 8, 5, Math.PI, 0, false);
-      g.strokePath();
-      // Lock body
-      g.fillStyle(0x8b0000, 1);
-      g.fillRoundedRect(5, 10, 14, 12, 2);
-      g.lineStyle(1, 0xd32f2f, 1);
-      g.strokeRoundedRect(5, 10, 14, 12, 2);
-      // Mini skull on face
-      g.fillStyle(0xffffff, 0.8);
-      g.fillCircle(12, 14, 3);
-      g.fillStyle(0x000000, 1);
-      g.fillCircle(10.5, 13.5, 1);
-      g.fillCircle(13.5, 13.5, 1);
-      g.fillRect(11, 16, 2, 2);
-    });
-
-    // Zero-Day: Nearly invisible dashed circle
-    this.createTexture(scene, 'enemy_zero_day', size, size, (g) => {
-      // Faint dashed circle outline
-      g.lineStyle(1, 0x888888, 0.15);
-      const cx = 12, cy = 12, r = 9;
-      const segments = 12;
-      for (let i = 0; i < segments; i += 2) {
-        const a1 = (Math.PI * 2 * i) / segments;
-        const a2 = (Math.PI * 2 * (i + 1)) / segments;
+      const color = 0xd9534f;
+      const highlight = 0xe8706b;
+      const carW = 7, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 3; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        // Top edge highlight for 3D depth
+        g.lineStyle(1, highlight, 1);
         g.beginPath();
-        g.arc(cx, cy, r, a1, a2, false);
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
         g.strokePath();
       }
-      // Faint question mark
-      g.lineStyle(1, 0x666666, 0.15);
+    });
+
+    // DDoS: Single tiny red square (5x5) — swarms make many appear
+    this.createTexture(scene, 'enemy_ddos', size, size, (g) => {
+      const color = 0xd9534f;
+      const highlight = 0xe8706b;
+      g.fillStyle(color, 1);
+      g.fillRect(10, 10, 5, 5);
+      g.lineStyle(1, highlight, 1);
       g.beginPath();
-      g.arc(12, 10, 3, Math.PI * 1.2, Math.PI * 0.1, false);
+      g.moveTo(10, 10);
+      g.lineTo(15, 10);
       g.strokePath();
-      g.fillStyle(0x666666, 0.15);
-      g.fillCircle(12, 16, 1);
+    });
+
+    // Phishing: 3 green cars identical to email — last car has subtle red dot
+    this.createTexture(scene, 'enemy_phishing', size, size, (g) => {
+      const color = 0x5ea500;
+      const highlight = 0x7cc620;
+      const carW = 7, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 3; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+      }
+      // Subtle red dot on last car (hard to spot)
+      const lastCarX = startX + 2 * (carW + gap);
+      g.fillStyle(0xd9534f, 0.7);
+      g.fillCircle(lastCarX + carW - 2, startY + carH - 2, 1);
+    });
+
+    // SQL Injection: 2 orange cars with pointed front (wedge on first car)
+    this.createTexture(scene, 'enemy_sql_injection', size, size, (g) => {
+      const color = 0xf47f28;
+      const highlight = 0xffa050;
+      const carW = 9, carH = 5, gap = 1;
+      const startX = 2, startY = 10;
+      // First car: wedge/pointed front
+      g.fillStyle(color, 1);
+      g.beginPath();
+      g.moveTo(startX + 3, startY);
+      g.lineTo(startX + carW, startY);
+      g.lineTo(startX + carW, startY + carH);
+      g.lineTo(startX + 3, startY + carH);
+      g.lineTo(startX, startY + Math.floor(carH / 2));
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(1, highlight, 1);
+      g.beginPath();
+      g.moveTo(startX + 3, startY);
+      g.lineTo(startX + carW, startY);
+      g.strokePath();
+      // Second car: regular rectangle
+      const x2 = startX + carW + gap;
+      g.fillStyle(color, 1);
+      g.fillRect(x2, startY, carW, carH);
+      g.lineStyle(1, highlight, 1);
+      g.beginPath();
+      g.moveTo(x2, startY);
+      g.lineTo(x2 + carW, startY);
+      g.strokePath();
+    });
+
+    // Ransomware C2: 4 dark maroon cars with padlock icon on lead car
+    this.createTexture(scene, 'enemy_ransomware_c2', size, size, (g) => {
+      const color = 0x8b0000;
+      const highlight = 0xb30000;
+      const carW = 5, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 4; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+      }
+      // Padlock icon on lead car
+      const lx = startX + 1;
+      g.lineStyle(1, 0xffffff, 0.8);
+      g.beginPath();
+      g.arc(lx + 2, startY + 1, 1.5, Math.PI, 0, false);
+      g.strokePath();
+      g.fillStyle(0xffffff, 0.8);
+      g.fillRect(lx + 0.5, startY + 1, 3, 2.5);
+    });
+
+    // Zero-Day: 2 cars with dashed outlines only, no fill, 0.2 alpha
+    this.createTexture(scene, 'enemy_zero_day', size, size, (g) => {
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        // Dashed outline (draw segments)
+        g.lineStyle(1, 0x888888, 0.2);
+        const dashLen = 2, gapLen = 2;
+        // Top edge dashes
+        for (let d = 0; d < carW; d += dashLen + gapLen) {
+          g.beginPath();
+          g.moveTo(x + d, startY);
+          g.lineTo(x + Math.min(d + dashLen, carW), startY);
+          g.strokePath();
+        }
+        // Bottom edge dashes
+        for (let d = 0; d < carW; d += dashLen + gapLen) {
+          g.beginPath();
+          g.moveTo(x + d, startY + carH);
+          g.lineTo(x + Math.min(d + dashLen, carW), startY + carH);
+          g.strokePath();
+        }
+        // Left edge
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x, startY + carH);
+        g.strokePath();
+        // Right edge
+        g.beginPath();
+        g.moveTo(x + carW, startY);
+        g.lineTo(x + carW, startY + carH);
+        g.strokePath();
+      }
     });
 
     this.generateEnemyTexturesPart2(scene, size);
   }
 
   private static generateEnemyTexturesPart2(scene: Phaser.Scene, size: number): void {
-    // === OT THREATS ===
+    // === OT THREATS (train-car blocks) ===
 
-    // Modbus Exploit: Dark orange gear/cog
+    // Modbus Exploit: 3 dark amber cars with gear icon on lead car
     this.createTexture(scene, 'enemy_modbus_exploit', size, size, (g) => {
-      g.fillStyle(0xcc5500, 1);
-      const cx = 12, cy = 12;
-      const teeth = 8;
-      const outerR = 11, innerR = 7;
-      g.beginPath();
-      for (let i = 0; i < teeth * 2; i++) {
-        const angle = (Math.PI * i) / teeth;
-        const r = i % 2 === 0 ? outerR : innerR;
-        const px = cx + r * Math.cos(angle);
-        const py = cy + r * Math.sin(angle);
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
+      const color = 0xb8860b;
+      const highlight = 0xdaa520;
+      const carW = 7, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 3; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
       }
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(1, 0xff8800, 1);
+      // Gear icon on lead car (small cross + circle)
+      const gx = startX + 3, gy = startY + 2;
+      g.lineStyle(1, 0xffffff, 0.8);
+      g.beginPath();
+      g.moveTo(gx - 1, gy);
+      g.lineTo(gx + 1, gy);
       g.strokePath();
-      // Center hole
-      g.fillStyle(0x1a1a1a, 1);
-      g.fillCircle(cx, cy, 3);
-      // Inner ring detail
-      g.lineStyle(1, 0xff8800, 0.5);
-      g.strokeCircle(cx, cy, 5);
+      g.beginPath();
+      g.moveTo(gx, gy - 1);
+      g.lineTo(gx, gy + 1);
+      g.strokePath();
+      g.strokeCircle(gx, gy, 1.5);
     });
 
-    // Firmware Worm: Purple segmented worm (3 decreasing circles)
+    // Firmware Worm: 4 purple cars, each slightly smaller (tapered)
     this.createTexture(scene, 'enemy_firmware_worm', size, size, (g) => {
-      // Tail (smallest)
-      g.fillStyle(0x5c2d91, 1);
-      g.fillCircle(5, 12, 3);
-      // Middle segment
-      g.fillStyle(0x753bbd, 1);
-      g.fillCircle(11, 12, 4);
-      // Head (largest)
-      g.fillStyle(0x9b59b6, 1);
-      g.fillCircle(18, 12, 5);
-      // Eyes on head
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(17, 10, 1.5);
-      g.fillCircle(20, 10, 1.5);
-      g.fillStyle(0x000000, 1);
-      g.fillCircle(17.5, 10, 0.8);
-      g.fillCircle(20.5, 10, 0.8);
-      // Segment outlines
-      g.lineStyle(1, 0xce93d8, 0.8);
-      g.strokeCircle(5, 12, 3);
-      g.strokeCircle(11, 12, 4);
-      g.strokeCircle(18, 12, 5);
+      const color = 0x753bbd;
+      const highlight = 0x9b59b6;
+      const gap = 1;
+      const startY = 10;
+      // Cars: 7x5, 6x5, 5x5, 4x5 (tapered)
+      const widths = [7, 6, 5, 4];
+      let x = 0;
+      for (let i = 0; i < 4; i++) {
+        const cw = widths[i];
+        const yOffset = Math.floor((5 - cw + widths[0]) / 2);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY + (i * 0.5), cw, 5);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY + (i * 0.5));
+        g.lineTo(x + cw, startY + (i * 0.5));
+        g.strokePath();
+        x += cw + gap;
+      }
     });
 
-    // Signal Jammer: Yellow lightning bolt with radio waves
+    // Signal Jammer: 2 yellow cars with lightning bolt lines radiating
     this.createTexture(scene, 'enemy_signal_jammer', size, size, (g) => {
-      // Radio wave arcs (left)
-      g.lineStyle(2, 0xe7d747, 0.5);
+      const color = 0xe7d747;
+      const highlight = 0xffeb3b;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+      }
+      // Lightning bolt lines radiating from cars
+      g.lineStyle(1, 0xffeb3b, 0.8);
       g.beginPath();
-      g.arc(12, 12, 11, Math.PI * 0.6, Math.PI * 1.4, false);
+      g.moveTo(6, startY - 1);
+      g.lineTo(4, startY - 4);
       g.strokePath();
       g.beginPath();
-      g.arc(12, 12, 8, Math.PI * 0.7, Math.PI * 1.3, false);
-      g.strokePath();
-      // Radio wave arcs (right)
-      g.beginPath();
-      g.arc(12, 12, 11, -Math.PI * 0.4, Math.PI * 0.4, false);
+      g.moveTo(12, startY - 1);
+      g.lineTo(12, startY - 4);
       g.strokePath();
       g.beginPath();
-      g.arc(12, 12, 8, -Math.PI * 0.3, Math.PI * 0.3, false);
+      g.moveTo(18, startY - 1);
+      g.lineTo(20, startY - 4);
       g.strokePath();
-      // Lightning bolt center
-      g.fillStyle(0xe7d747, 1);
       g.beginPath();
-      g.moveTo(14, 3);
-      g.lineTo(9, 12);
-      g.lineTo(13, 12);
-      g.lineTo(10, 21);
-      g.lineTo(16, 12);
-      g.lineTo(12, 12);
-      g.lineTo(14, 3);
-      g.closePath();
-      g.fillPath();
+      g.moveTo(6, startY + carH + 1);
+      g.lineTo(4, startY + carH + 4);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(18, startY + carH + 1);
+      g.lineTo(20, startY + carH + 4);
+      g.strokePath();
     });
 
-    // === LEGITIMATE TRAFFIC (rounded, cool colors, friendly) ===
+    // === LEGITIMATE TRAFFIC (train-car blocks, cool colors, smooth) ===
 
-    // HTTP Request: Blue rounded rect with "GET" lines
+    // HTTP Request: 2 blue cars, clean and uniform
     this.createTexture(scene, 'enemy_http_request', size, size, (g) => {
-      g.fillStyle(0x0076a8, 1);
-      g.fillRoundedRect(3, 5, 18, 14, 4);
-      g.lineStyle(1, 0x48cae4, 1);
-      g.strokeRoundedRect(3, 5, 18, 14, 4);
-      // "GET" simulated with 3 short lines
-      g.lineStyle(2, 0xffffff, 0.8);
-      g.beginPath();
-      g.moveTo(6, 10);
-      g.lineTo(9, 10);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(10, 10);
-      g.lineTo(14, 10);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(15, 10);
-      g.lineTo(18, 10);
-      g.strokePath();
-      // Underline
-      g.lineStyle(1, 0xffffff, 0.4);
-      g.beginPath();
-      g.moveTo(6, 14);
-      g.lineTo(18, 14);
-      g.strokePath();
+      const color = 0x0076a8;
+      const highlight = 0x48cae4;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+      }
     });
 
-    // DNS Query: Green diamond with "53"
+    // DNS Query: 1 green car with "53" simulated (two short lines)
     this.createTexture(scene, 'enemy_dns_query', size, size, (g) => {
-      g.fillStyle(0x84bd00, 1);
+      const color = 0x84bd00;
+      const highlight = 0xb8e65e;
+      const carW = 14, carH = 5;
+      const startX = 5, startY = 10;
+      g.fillStyle(color, 1);
+      g.fillRect(startX, startY, carW, carH);
+      g.lineStyle(1, highlight, 1);
       g.beginPath();
-      g.moveTo(12, 2);
-      g.lineTo(22, 12);
-      g.lineTo(12, 22);
-      g.lineTo(2, 12);
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(1, 0xb8e65e, 1);
+      g.moveTo(startX, startY);
+      g.lineTo(startX + carW, startY);
       g.strokePath();
-      // "53" simulated as two vertical strokes
-      g.lineStyle(2, 0xffffff, 0.8);
+      // "53" simulated with two short lines
+      g.lineStyle(1, 0xffffff, 0.8);
       g.beginPath();
-      g.moveTo(9, 9);
-      g.lineTo(9, 11);
-      g.lineTo(11, 11);
-      g.lineTo(11, 13);
-      g.lineTo(9, 13);
+      g.moveTo(startX + 3, startY + 2);
+      g.lineTo(startX + 5, startY + 2);
       g.strokePath();
       g.beginPath();
-      g.moveTo(13, 9);
-      g.lineTo(15, 9);
-      g.lineTo(15, 11);
-      g.lineTo(13, 11);
-      g.lineTo(13, 13);
-      g.lineTo(15, 13);
+      g.moveTo(startX + 7, startY + 2);
+      g.lineTo(startX + 9, startY + 2);
       g.strokePath();
     });
 
-    // API Call: Teal curly braces "{ }"
+    // API Call: 2 teal cars with curly-brace lines on first car
     this.createTexture(scene, 'enemy_api_call', size, size, (g) => {
-      g.fillStyle(0x0093b2, 0.3);
-      g.fillRoundedRect(2, 4, 20, 16, 4);
-      // Left brace
-      g.lineStyle(3, 0x0093b2, 1);
+      const color = 0x0093b2;
+      const highlight = 0x4dd0e1;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+      }
+      // Curly-brace lines on first car
+      g.lineStyle(1, 0xffffff, 0.7);
       g.beginPath();
-      g.moveTo(8, 6);
-      g.lineTo(6, 8);
-      g.lineTo(5, 12);
-      g.lineTo(6, 16);
-      g.lineTo(8, 18);
+      g.moveTo(startX + 2, startY + 1);
+      g.lineTo(startX + 1, startY + 2.5);
+      g.lineTo(startX + 2, startY + 4);
       g.strokePath();
-      // Right brace
       g.beginPath();
-      g.moveTo(16, 6);
-      g.lineTo(18, 8);
-      g.lineTo(19, 12);
-      g.lineTo(18, 16);
-      g.lineTo(16, 18);
+      g.moveTo(startX + 8, startY + 1);
+      g.lineTo(startX + 9, startY + 2.5);
+      g.lineTo(startX + 8, startY + 4);
       g.strokePath();
-      // Center dot
-      g.fillStyle(0x4dd0e1, 1);
-      g.fillCircle(12, 12, 2);
     });
 
-    // Email: Green envelope
+    // Email: 2 green cars, smooth edges, white stripe
     this.createTexture(scene, 'enemy_email', size, size, (g) => {
-      // Envelope body
-      g.fillStyle(0x5ea500, 1);
-      g.fillRect(4, 8, 16, 11);
-      g.lineStyle(1, 0x3d7000, 1);
-      g.strokeRect(4, 8, 16, 11);
-      // Triangle flap on top
-      g.fillStyle(0x84bd00, 1);
-      g.beginPath();
-      g.moveTo(4, 8);
-      g.lineTo(12, 14);
-      g.lineTo(20, 8);
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(1, 0x3d7000, 1);
-      g.beginPath();
-      g.moveTo(4, 8);
-      g.lineTo(12, 14);
-      g.lineTo(20, 8);
-      g.strokePath();
+      const color = 0x5ea500;
+      const highlight = 0x7cc620;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
+        g.strokePath();
+        // White stripe through middle
+        g.lineStyle(1, 0xffffff, 0.5);
+        g.beginPath();
+        g.moveTo(x + 1, startY + 2.5);
+        g.lineTo(x + carW - 1, startY + 2.5);
+        g.strokePath();
+      }
     });
 
     this.generateEnemyTexturesPart3(scene, size);
   }
 
   private static generateEnemyTexturesPart3(scene: Phaser.Scene, size: number): void {
-    // === OT LEGITIMATE TRAFFIC ===
+    // === OT LEGITIMATE TRAFFIC (train-car blocks) ===
 
-    // PLC Heartbeat: Amber EKG pulse line
+    // PLC Heartbeat: 2 amber cars with pulse line on first car
     this.createTexture(scene, 'enemy_plc_heartbeat', size, size, (g) => {
-      // Background pill shape
-      g.fillStyle(0xdaa520, 0.2);
-      g.fillRoundedRect(2, 6, 20, 12, 6);
-      // EKG line
-      g.lineStyle(2, 0xdaa520, 1);
-      g.beginPath();
-      g.moveTo(3, 12);
-      g.lineTo(6, 12);
-      g.lineTo(8, 6);
-      g.lineTo(10, 18);
-      g.lineTo(12, 8);
-      g.lineTo(14, 14);
-      g.lineTo(16, 12);
-      g.lineTo(18, 12);
-      g.lineTo(21, 12);
-      g.strokePath();
-      // Subtle glow
-      g.lineStyle(1, 0xffb74d, 0.3);
-      g.strokeRoundedRect(2, 6, 20, 12, 6);
-    });
-
-    // SCADA Telemetry: Gold gauge/dial
-    this.createTexture(scene, 'enemy_scada_telemetry', size, size, (g) => {
-      // Gauge circle
-      g.fillStyle(0xb8860b, 1);
-      g.beginPath();
-      g.arc(12, 13, 9, Math.PI, 0, false);
-      g.lineTo(21, 18);
-      g.lineTo(3, 18);
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(1, 0xdaa520, 1);
-      g.beginPath();
-      g.arc(12, 13, 9, Math.PI, 0, false);
-      g.strokePath();
-      // Needle
-      g.lineStyle(2, 0xffffff, 0.9);
-      g.beginPath();
-      g.moveTo(12, 13);
-      g.lineTo(16, 7);
-      g.strokePath();
-      // Center dot
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(12, 13, 2);
-      // Tick marks
-      g.lineStyle(1, 0xffffff, 0.5);
-      for (let i = 0; i <= 4; i++) {
-        const angle = Math.PI + (Math.PI * i) / 4;
+      const color = 0xdaa520;
+      const highlight = 0xffb74d;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRect(x, startY, carW, carH);
+        g.lineStyle(1, highlight, 1);
         g.beginPath();
-        g.moveTo(12 + Math.cos(angle) * 6, 13 + Math.sin(angle) * 6);
-        g.lineTo(12 + Math.cos(angle) * 8, 13 + Math.sin(angle) * 8);
+        g.moveTo(x, startY);
+        g.lineTo(x + carW, startY);
         g.strokePath();
       }
+      // Pulse line on first car
+      g.lineStyle(1, 0xffffff, 0.8);
+      g.beginPath();
+      g.moveTo(startX + 1, startY + 3);
+      g.lineTo(startX + 3, startY + 3);
+      g.lineTo(startX + 4, startY + 1);
+      g.lineTo(startX + 5, startY + 4);
+      g.lineTo(startX + 6, startY + 2);
+      g.lineTo(startX + 8, startY + 3);
+      g.strokePath();
     });
 
-    // Track Switch Command: Yellow Y-shape railroad switch
+    // SCADA Telemetry: 2 gold cars, rounded, with dial marks
+    this.createTexture(scene, 'enemy_scada_telemetry', size, size, (g) => {
+      const color = 0xb8860b;
+      const highlight = 0xdaa520;
+      const carW = 10, carH = 5, gap = 1;
+      const startX = 1, startY = 10;
+      for (let i = 0; i < 2; i++) {
+        const x = startX + i * (carW + gap);
+        g.fillStyle(color, 1);
+        g.fillRoundedRect(x, startY, carW, carH, 1);
+        g.lineStyle(1, highlight, 1);
+        g.beginPath();
+        g.moveTo(x + 1, startY);
+        g.lineTo(x + carW - 1, startY);
+        g.strokePath();
+      }
+      // Dial marks on first car (small ticks)
+      g.lineStyle(1, 0xffffff, 0.7);
+      g.beginPath();
+      g.moveTo(startX + 3, startY + 1);
+      g.lineTo(startX + 3, startY + 2);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(startX + 5, startY + 1);
+      g.lineTo(startX + 5, startY + 2);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(startX + 7, startY + 1);
+      g.lineTo(startX + 7, startY + 2);
+      g.strokePath();
+    });
+
+    // Track Switch Command: 1 yellow car with Y-shape line
     this.createTexture(scene, 'enemy_track_switch_cmd', size, size, (g) => {
-      // Y-shape rail lines
-      g.lineStyle(3, 0xe7d747, 1);
+      const color = 0xe7d747;
+      const highlight = 0xffeb3b;
+      const carW = 14, carH = 5;
+      const startX = 5, startY = 10;
+      g.fillStyle(color, 1);
+      g.fillRect(startX, startY, carW, carH);
+      g.lineStyle(1, highlight, 1);
       g.beginPath();
-      g.moveTo(4, 20);
-      g.lineTo(12, 12);
-      g.lineTo(12, 4);
+      g.moveTo(startX, startY);
+      g.lineTo(startX + carW, startY);
+      g.strokePath();
+      // Y-shape line on car
+      g.lineStyle(1, 0xffffff, 0.8);
+      g.beginPath();
+      g.moveTo(startX + 4, startY + 1);
+      g.lineTo(startX + 7, startY + 3);
+      g.lineTo(startX + 7, startY + 4);
       g.strokePath();
       g.beginPath();
-      g.moveTo(20, 20);
-      g.lineTo(12, 12);
+      g.moveTo(startX + 10, startY + 1);
+      g.lineTo(startX + 7, startY + 3);
       g.strokePath();
-      // Switch lever
-      g.lineStyle(2, 0xffffff, 0.7);
-      g.beginPath();
-      g.moveTo(10, 14);
-      g.lineTo(16, 10);
-      g.strokePath();
-      // Junction point
-      g.fillStyle(0xe7d747, 1);
-      g.fillCircle(12, 12, 3);
-      g.lineStyle(1, 0xffeb3b, 1);
-      g.strokeCircle(12, 12, 3);
     });
 
-    // Train Position: Gold diamond with dot in center
+    // Train Position: 1 gold diamond-shaped car (small, fast)
     this.createTexture(scene, 'enemy_train_position', size, size, (g) => {
-      g.fillStyle(0xdaa520, 1);
+      const color = 0xdaa520;
+      const highlight = 0xffd700;
+      // Diamond shape
+      g.fillStyle(color, 1);
       g.beginPath();
-      g.moveTo(12, 2);
-      g.lineTo(22, 12);
-      g.lineTo(12, 22);
-      g.lineTo(2, 12);
+      g.moveTo(12, 7);
+      g.lineTo(19, 12);
+      g.lineTo(12, 17);
+      g.lineTo(5, 12);
       g.closePath();
       g.fillPath();
-      g.lineStyle(1, 0xffd700, 1);
-      g.strokePath();
-      // Inner diamond outline
-      g.lineStyle(1, 0xffffff, 0.3);
+      g.lineStyle(1, highlight, 1);
       g.beginPath();
-      g.moveTo(12, 5);
+      g.moveTo(12, 7);
       g.lineTo(19, 12);
-      g.lineTo(12, 19);
+      g.lineTo(12, 17);
       g.lineTo(5, 12);
       g.closePath();
       g.strokePath();
-      // Center dot
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(12, 12, 3);
-      g.fillStyle(0xdaa520, 1);
-      g.fillCircle(12, 12, 1.5);
     });
   }
 

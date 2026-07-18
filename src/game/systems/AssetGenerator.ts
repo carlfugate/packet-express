@@ -8,391 +8,260 @@ export class AssetGenerator {
   }
 
   private static generateTowerTextures(scene: Phaser.Scene): void {
-    const w = 40;
-    const h = 48;
+    const s = 32;
 
-    // Firewall: Blue brick wall with data lines and lock icon
-    this.createTexture(scene, 'tower_firewall', w, h, (g) => {
-      // Dark blue border/base
-      g.fillStyle(0x044872, 1);
-      g.fillRect(4, 6, 32, 38);
-      // Blue wall body
+    // Firewall: Server rack rectangle with 3 LED dots
+    this.createTexture(scene, 'tower_firewall', s, s, (g) => {
+      // Rack body
       g.fillStyle(0x0076a8, 1);
-      g.fillRect(6, 8, 28, 34);
-      // Brick pattern
-      g.lineStyle(1, 0x044872, 0.6);
-      for (let row = 0; row < 5; row++) {
-        const y = 12 + row * 7;
-        g.beginPath();
-        g.moveTo(6, y);
-        g.lineTo(34, y);
-        g.strokePath();
-        const offset = row % 2 === 0 ? 0 : 7;
-        for (let col = 0; col < 4; col++) {
-          const x = 10 + col * 7 + offset;
-          if (x < 34) {
-            g.beginPath();
-            g.moveTo(x, y);
-            g.lineTo(x, y + 7);
-            g.strokePath();
-          }
-        }
-      }
-      // 3 horizontal data lines (glowing)
-      g.lineStyle(2, 0x48cae4, 0.9);
-      g.beginPath();
-      g.moveTo(9, 18);
-      g.lineTo(31, 18);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(9, 26);
-      g.lineTo(31, 26);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(9, 34);
-      g.lineTo(31, 34);
-      g.strokePath();
-      // Lock icon at top
-      g.lineStyle(2, 0xffffff, 0.9);
-      g.beginPath();
-      g.arc(20, 7, 3, Math.PI, 0, false);
-      g.strokePath();
-      g.fillStyle(0xffffff, 0.9);
-      g.fillRect(17, 7, 6, 5);
-      // Border highlight
+      g.fillRect(6, 4, 20, 24);
+      // Solid border
       g.lineStyle(2, 0x044872, 1);
-      g.strokeRect(4, 6, 32, 38);
+      g.strokeRect(6, 4, 20, 24);
+      // 3 horizontal LED dots (green)
+      g.fillStyle(0x84bd00, 1);
+      g.fillCircle(12, 14, 2);
+      g.fillCircle(16, 14, 2);
+      g.fillCircle(20, 14, 2);
+      // Rack lines
+      g.lineStyle(1, 0x044872, 0.6);
+      g.beginPath();
+      g.moveTo(8, 10);
+      g.lineTo(24, 10);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(8, 18);
+      g.lineTo(24, 18);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(8, 22);
+      g.lineTo(24, 22);
+      g.strokePath();
     });
 
-    // IDS: Purple octagon with eye and radar sweep
-    this.createTexture(scene, 'tower_ids', w, h, (g) => {
-      // Glow around edges
-      g.fillStyle(0x753bbd, 0.2);
-      g.fillCircle(20, 24, 22);
-      // Octagon shape
+    // IDS: Circular radar/monitoring screen with sweep line and blips
+    this.createTexture(scene, 'tower_ids', s, s, (g) => {
+      const cx = 16, cy = 16;
+      // Radar screen circle
       g.fillStyle(0x753bbd, 1);
-      g.beginPath();
-      const cx = 20, cy = 24, r = 18;
-      for (let i = 0; i < 8; i++) {
-        const angle = (Math.PI * 2 * i) / 8 - Math.PI / 8;
-        const px = cx + r * Math.cos(angle);
-        const py = cy + r * Math.sin(angle);
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
-      }
-      g.closePath();
-      g.fillPath();
-      // Lighter purple border
+      g.fillCircle(cx, cy, 13);
       g.lineStyle(2, 0xb388ff, 1);
-      g.beginPath();
-      for (let i = 0; i < 8; i++) {
-        const angle = (Math.PI * 2 * i) / 8 - Math.PI / 8;
-        const px = cx + r * Math.cos(angle);
-        const py = cy + r * Math.sin(angle);
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
-      }
-      g.closePath();
-      g.strokePath();
-      // Eye: white sclera
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(cx, cy, 8);
-      // Purple iris
-      g.fillStyle(0x753bbd, 1);
-      g.fillCircle(cx, cy, 5);
-      // Black pupil
-      g.fillStyle(0x000000, 1);
-      g.fillCircle(cx, cy, 2);
-      // Eye highlight
-      g.fillStyle(0xffffff, 0.8);
-      g.fillCircle(cx + 2, cy - 2, 1.5);
-      // Radar sweep arc
-      g.fillStyle(0x00ff88, 0.25);
-      g.beginPath();
-      g.moveTo(cx, cy);
-      g.arc(cx, cy, 17, -1.0, -0.4, false);
-      g.closePath();
-      g.fillPath();
-      // Radar sweep line
+      g.strokeCircle(cx, cy, 13);
+      // Inner grid rings
+      g.lineStyle(1, 0xb388ff, 0.3);
+      g.strokeCircle(cx, cy, 6);
+      g.strokeCircle(cx, cy, 10);
+      // Sweep line (fixed position)
       g.lineStyle(2, 0x00ff88, 0.9);
       g.beginPath();
       g.moveTo(cx, cy);
-      g.lineTo(cx + Math.cos(-0.4) * 17, cy + Math.sin(-0.4) * 17);
+      g.lineTo(cx + Math.cos(-0.5) * 12, cy + Math.sin(-0.5) * 12);
       g.strokePath();
+      // Green dot blips
+      g.fillStyle(0x00ff88, 1);
+      g.fillCircle(cx + 4, cy - 5, 1.5);
+      g.fillCircle(cx - 3, cy + 6, 1.5);
+      g.fillCircle(cx + 7, cy + 2, 1);
     });
 
-    // WAF: Orange shield with W letter
-    this.createTexture(scene, 'tower_waf', w, h, (g) => {
-      // Darker edge gradient (outer shield)
-      g.fillStyle(0xc45a10, 1);
-      g.beginPath();
-      g.moveTo(20, 2);
-      g.lineTo(36, 10);
-      g.lineTo(36, 30);
-      g.lineTo(20, 44);
-      g.lineTo(4, 30);
-      g.lineTo(4, 10);
-      g.closePath();
-      g.fillPath();
-      // Inner shield (brighter orange)
+    // WAF: Shield-shaped panel with small screen showing "WAF"
+    this.createTexture(scene, 'tower_waf', s, s, (g) => {
+      // Shield shape
       g.fillStyle(0xf47f28, 1);
       g.beginPath();
-      g.moveTo(20, 6);
-      g.lineTo(32, 12);
-      g.lineTo(32, 28);
-      g.lineTo(20, 40);
-      g.lineTo(8, 28);
-      g.lineTo(8, 12);
+      g.moveTo(16, 2);
+      g.lineTo(28, 8);
+      g.lineTo(28, 20);
+      g.lineTo(16, 30);
+      g.lineTo(4, 20);
+      g.lineTo(4, 8);
       g.closePath();
       g.fillPath();
-      // Inner highlight
-      g.fillStyle(0xffb74d, 0.3);
+      // Border
+      g.lineStyle(2, 0xc45a10, 1);
       g.beginPath();
-      g.moveTo(20, 10);
-      g.lineTo(28, 14);
-      g.lineTo(28, 22);
-      g.lineTo(20, 30);
-      g.lineTo(12, 22);
-      g.lineTo(12, 14);
+      g.moveTo(16, 2);
+      g.lineTo(28, 8);
+      g.lineTo(28, 20);
+      g.lineTo(16, 30);
+      g.lineTo(4, 20);
+      g.lineTo(4, 8);
       g.closePath();
-      g.fillPath();
-      // W letter in white
-      g.lineStyle(3, 0xffffff, 1);
-      g.beginPath();
-      g.moveTo(11, 16);
-      g.lineTo(14, 32);
-      g.lineTo(20, 24);
-      g.lineTo(26, 32);
-      g.lineTo(29, 16);
       g.strokePath();
-      // Shield border
-      g.lineStyle(2, 0xffb74d, 1);
+      // Small screen/display in center
+      g.fillStyle(0x0a1628, 1);
+      g.fillRect(10, 12, 12, 8);
+      g.lineStyle(1, 0xffffff, 0.6);
+      g.strokeRect(10, 12, 12, 8);
+      // "WAF" as tiny lines (simulated text)
+      g.lineStyle(1, 0x84bd00, 1);
+      // W
       g.beginPath();
-      g.moveTo(20, 2);
-      g.lineTo(36, 10);
-      g.lineTo(36, 30);
-      g.lineTo(20, 44);
-      g.lineTo(4, 30);
-      g.lineTo(4, 10);
-      g.closePath();
+      g.moveTo(12, 14);
+      g.lineTo(13, 18);
+      g.lineTo(14, 16);
+      g.lineTo(15, 18);
+      g.lineTo(16, 14);
+      g.strokePath();
+      // A
+      g.beginPath();
+      g.moveTo(17, 18);
+      g.lineTo(18, 14);
+      g.lineTo(19, 18);
+      g.strokePath();
+      // F
+      g.beginPath();
+      g.moveTo(20, 18);
+      g.lineTo(20, 14);
+      g.lineTo(22, 14);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(20, 16);
+      g.lineTo(21, 16);
       g.strokePath();
     });
 
-    // Honeypot: Yellow pot/jar with honey drips
-    this.createTexture(scene, 'tower_honeypot', w, h, (g) => {
-      // Jar body (round bottom, narrow neck, wide rim)
+    // Honeypot: Container/box with wifi/signal icon, slightly tilted
+    this.createTexture(scene, 'tower_honeypot', s, s, (g) => {
+      // Slightly tilted box (use transform via skewed rect)
       g.fillStyle(0xe7d747, 1);
       g.beginPath();
-      g.moveTo(12, 16);
-      g.lineTo(10, 20);
-      g.lineTo(8, 30);
-      g.arc(20, 36, 12, Math.PI, 0, false);
-      g.lineTo(30, 20);
-      g.lineTo(28, 16);
+      g.moveTo(5, 8);
+      g.lineTo(27, 6);
+      g.lineTo(28, 26);
+      g.lineTo(6, 28);
       g.closePath();
       g.fillPath();
-      // Amber fill inside (darker)
-      g.fillStyle(0xc9a800, 0.6);
-      g.beginPath();
-      g.moveTo(12, 22);
-      g.lineTo(10, 30);
-      g.arc(20, 36, 10, Math.PI, 0, false);
-      g.lineTo(28, 22);
-      g.closePath();
-      g.fillPath();
-      // Narrow neck
-      g.fillStyle(0xe7d747, 1);
-      g.fillRect(14, 10, 12, 8);
-      // Wide rim
-      g.fillStyle(0xffd54f, 1);
-      g.fillRect(10, 8, 20, 4);
-      // Darker border
+      // Border
       g.lineStyle(2, 0xa89000, 1);
       g.beginPath();
-      g.moveTo(12, 16);
-      g.lineTo(10, 20);
-      g.lineTo(8, 30);
-      g.arc(20, 36, 12, Math.PI, 0, false);
-      g.lineTo(30, 20);
-      g.lineTo(28, 16);
+      g.moveTo(5, 8);
+      g.lineTo(27, 6);
+      g.lineTo(28, 26);
+      g.lineTo(6, 28);
       g.closePath();
       g.strokePath();
-      g.strokeRect(10, 8, 20, 4);
-      // Honey drips from rim
-      g.fillStyle(0xffab00, 1);
-      g.fillCircle(13, 14, 2);
-      g.fillRect(12, 10, 2, 4);
-      g.fillCircle(27, 15, 2.5);
-      g.fillRect(26, 10, 2, 5);
-      g.fillCircle(20, 13, 1.5);
-      g.fillRect(19, 10, 2, 3);
+      // Wifi/signal arcs (deceptive AP)
+      g.lineStyle(2, 0x1a1a1a, 0.8);
+      g.beginPath();
+      g.arc(16, 20, 4, Math.PI + 0.5, -0.5, false);
+      g.strokePath();
+      g.lineStyle(2, 0x1a1a1a, 0.6);
+      g.beginPath();
+      g.arc(16, 20, 7, Math.PI + 0.6, -0.6, false);
+      g.strokePath();
+      // Center dot
+      g.fillStyle(0x1a1a1a, 1);
+      g.fillCircle(16, 20, 1.5);
     });
 
-    this.generateTowerTexturesPart2(scene, w, h);
+    this.generateTowerTexturesPart2(scene, s, s);
   }
 
-  private static generateTowerTexturesPart2(scene: Phaser.Scene, w: number, h: number): void {
-    // Rate Limiter: Teal speedometer/gauge
-    this.createTexture(scene, 'tower_rate_limiter', w, h, (g) => {
-      const cx = 20, cy = 28;
-      // Gauge body
+  private static generateTowerTexturesPart2(scene: Phaser.Scene, _w: number, _h: number): void {
+    const s = 32;
+
+    // Rate Limiter: Traffic light — vertical rectangle with 3 circles (red/yellow/green)
+    this.createTexture(scene, 'tower_rate_limiter', s, s, (g) => {
+      // Vertical rectangle body
       g.fillStyle(0x0093b2, 1);
-      g.beginPath();
-      g.arc(cx, cy, 19, Math.PI, 0, false);
-      g.lineTo(39, 44);
-      g.lineTo(1, 44);
-      g.closePath();
-      g.fillPath();
+      g.fillRect(10, 2, 12, 28);
       // Border
-      g.lineStyle(2, 0x4dd0e1, 1);
-      g.beginPath();
-      g.arc(cx, cy, 19, Math.PI, 0, false);
-      g.strokePath();
-      // Gauge arc (white)
-      g.lineStyle(3, 0xffffff, 0.5);
-      g.beginPath();
-      g.arc(cx, cy, 14, Math.PI + 0.2, -0.2, false);
-      g.strokePath();
-      // Red zone (right side of gauge)
-      g.lineStyle(4, 0xd9534f, 0.8);
-      g.beginPath();
-      g.arc(cx, cy, 14, -0.8, -0.2, false);
-      g.strokePath();
-      // Tick marks
-      for (let i = 0; i <= 6; i++) {
-        const angle = Math.PI + (Math.PI * i) / 6;
-        const inner = 11;
-        const outer = 16;
-        g.lineStyle(2, 0xffffff, 0.7);
-        g.beginPath();
-        g.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
-        g.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
-        g.strokePath();
-      }
-      // Needle pointing right (danger zone)
-      const needleAngle = Math.PI + Math.PI * 0.75;
-      g.lineStyle(3, 0xd9534f, 1);
-      g.beginPath();
-      g.moveTo(cx, cy);
-      g.lineTo(cx + Math.cos(needleAngle) * 13, cy + Math.sin(needleAngle) * 13);
-      g.strokePath();
-      // Center cap
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(cx, cy, 3);
-    });
-
-    // Packet Inspector: Green magnifying glass with crosshair
-    this.createTexture(scene, 'tower_packet_inspector', w, h, (g) => {
-      const lx = 16, ly = 18, lr = 13;
-      // Lens fill (light green tint)
-      g.fillStyle(0x84bd00, 0.2);
-      g.fillCircle(lx, ly, lr);
-      // Crosshair lines inside lens
-      g.lineStyle(1, 0x84bd00, 0.5);
-      g.beginPath();
-      g.moveTo(lx - 8, ly);
-      g.lineTo(lx + 8, ly);
-      g.strokePath();
-      g.beginPath();
-      g.moveTo(lx, ly - 8);
-      g.lineTo(lx, ly + 8);
-      g.strokePath();
-      // Small crosshair circle
-      g.lineStyle(1, 0x84bd00, 0.4);
-      g.strokeCircle(lx, ly, 5);
-      // Lens ring
-      g.lineStyle(4, 0x84bd00, 1);
-      g.strokeCircle(lx, ly, lr);
-      // Handle
-      g.lineStyle(5, 0x5ea500, 1);
-      g.beginPath();
-      g.moveTo(lx + lr * 0.7, ly + lr * 0.7);
-      g.lineTo(36, 42);
-      g.strokePath();
-      // Handle grip
-      g.lineStyle(4, 0x3d7000, 1);
-      g.beginPath();
-      g.moveTo(34, 40);
-      g.lineTo(38, 45);
-      g.strokePath();
-      // Sparkle highlight
-      g.fillStyle(0xffffff, 0.7);
-      g.fillCircle(lx - 4, ly - 5, 2);
-      g.fillCircle(lx - 6, ly - 3, 1);
-    });
-
-    // Data Diode: Dark green rectangle with white one-way arrow
-    this.createTexture(scene, 'tower_data_diode', w, h, (g) => {
-      // Main body
-      g.fillStyle(0x2e7d32, 1);
-      g.fillRect(4, 10, 32, 28);
-      // Border
-      g.lineStyle(2, 0x4caf50, 1);
-      g.strokeRect(4, 10, 32, 28);
-      // Left barrier line (red)
-      g.lineStyle(3, 0xd9534f, 0.8);
-      g.beginPath();
-      g.moveTo(8, 12);
-      g.lineTo(8, 36);
-      g.strokePath();
-      // Large white arrow pointing RIGHT
-      g.fillStyle(0xffffff, 1);
-      g.beginPath();
-      g.moveTo(12, 20);
-      g.lineTo(24, 20);
-      g.lineTo(24, 15);
-      g.lineTo(34, 24);
-      g.lineTo(24, 33);
-      g.lineTo(24, 28);
-      g.lineTo(12, 28);
-      g.closePath();
-      g.fillPath();
-      // Direction indicator dots
-      g.fillStyle(0x84bd00, 0.6);
-      g.fillCircle(15, 24, 1.5);
-      g.fillCircle(19, 24, 1.5);
-    });
-
-    // Network Segmentation: Yellow/black hazard split with zigzag
-    this.createTexture(scene, 'tower_network_segmentation', w, h, (g) => {
-      // Left half (dark/black)
-      g.fillStyle(0x1a1a1a, 1);
-      g.fillRect(4, 6, 16, 36);
-      // Right half (yellow)
+      g.lineStyle(2, 0x044872, 1);
+      g.strokeRect(10, 2, 12, 28);
+      // Red circle (top)
+      g.fillStyle(0xd9534f, 1);
+      g.fillCircle(16, 8, 3);
+      // Yellow circle (middle)
       g.fillStyle(0xe7d747, 1);
-      g.fillRect(20, 6, 16, 36);
-      // Hazard stripes on left side
-      g.lineStyle(2, 0xe7d747, 0.7);
-      for (let i = 0; i < 6; i++) {
-        const y = 8 + i * 7;
+      g.fillCircle(16, 16, 3);
+      // Green circle (bottom)
+      g.fillStyle(0x84bd00, 1);
+      g.fillCircle(16, 24, 3);
+    });
+
+    // Packet Inspector: Camera/lens shape — concentric circles + mounting arm
+    this.createTexture(scene, 'tower_packet_inspector', s, s, (g) => {
+      const cx = 14, cy = 14;
+      // Outer circle (lens)
+      g.fillStyle(0x84bd00, 1);
+      g.fillCircle(cx, cy, 10);
+      g.lineStyle(2, 0x5ea500, 1);
+      g.strokeCircle(cx, cy, 10);
+      // Inner concentric circle
+      g.fillStyle(0x0a1628, 1);
+      g.fillCircle(cx, cy, 5);
+      g.lineStyle(1, 0x84bd00, 0.8);
+      g.strokeCircle(cx, cy, 5);
+      // Lens highlight
+      g.fillStyle(0xffffff, 0.4);
+      g.fillCircle(cx - 3, cy - 3, 2);
+      // Mounting arm (line extending down-right)
+      g.lineStyle(3, 0x5ea500, 1);
+      g.beginPath();
+      g.moveTo(cx + 7, cy + 7);
+      g.lineTo(28, 28);
+      g.strokePath();
+      // Mount base
+      g.fillStyle(0x3d7000, 1);
+      g.fillCircle(28, 28, 3);
+    });
+
+    // Data Diode: Rectangle split in half with arrow pointing right
+    this.createTexture(scene, 'tower_data_diode', s, s, (g) => {
+      // Left half (dark)
+      g.fillStyle(0x1a1a1a, 1);
+      g.fillRect(4, 6, 12, 20);
+      // Right half (green)
+      g.fillStyle(0x84bd00, 1);
+      g.fillRect(16, 6, 12, 20);
+      // Border
+      g.lineStyle(1, 0x484848, 1);
+      g.strokeRect(4, 6, 24, 20);
+      // Arrow pointing right (white)
+      g.fillStyle(0xffffff, 1);
+      g.beginPath();
+      g.moveTo(10, 13);
+      g.lineTo(18, 13);
+      g.lineTo(18, 10);
+      g.lineTo(24, 16);
+      g.lineTo(18, 22);
+      g.lineTo(18, 19);
+      g.lineTo(10, 19);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // Network Segmentation: Vertical barrier with horizontal dashes
+    this.createTexture(scene, 'tower_network_segmentation', s, s, (g) => {
+      // Vertical barrier line (yellow)
+      g.lineStyle(4, 0xe7d747, 1);
+      g.beginPath();
+      g.moveTo(16, 2);
+      g.lineTo(16, 30);
+      g.strokePath();
+      // Horizontal dashes on left side (black)
+      g.lineStyle(2, 0x1a1a1a, 1);
+      for (let i = 0; i < 5; i++) {
+        const y = 5 + i * 6;
         g.beginPath();
         g.moveTo(4, y);
-        g.lineTo(12, y + 5);
+        g.lineTo(12, y);
         g.strokePath();
       }
-      // Hazard stripes on right side
-      g.lineStyle(2, 0x1a1a1a, 0.7);
-      for (let i = 0; i < 6; i++) {
-        const y = 8 + i * 7;
+      // Horizontal dashes on right side (black)
+      for (let i = 0; i < 5; i++) {
+        const y = 5 + i * 6;
         g.beginPath();
-        g.moveTo(28, y);
-        g.lineTo(36, y + 5);
+        g.moveTo(20, y);
+        g.lineTo(28, y);
         g.strokePath();
       }
-      // Zigzag fence line down the middle
-      g.lineStyle(3, 0xd9534f, 1);
-      g.beginPath();
-      g.moveTo(20, 6);
-      for (let i = 0; i < 9; i++) {
-        const y = 10 + i * 4;
-        const x = i % 2 === 0 ? 17 : 23;
-        g.lineTo(x, y);
-      }
-      g.lineTo(20, 42);
-      g.strokePath();
-      // Border
-      g.lineStyle(2, 0x555555, 1);
-      g.strokeRect(4, 6, 32, 36);
+      // Small yellow dots at intersections
+      g.fillStyle(0xe7d747, 0.6);
+      g.fillCircle(16, 8, 1.5);
+      g.fillCircle(16, 16, 1.5);
+      g.fillCircle(16, 24, 1.5);
     });
   }
 

@@ -12,7 +12,11 @@ const TOWER_COLORS: Record<string, number> = {
   honeypot: 0xe7d747,
   rate_limiter: 0x0093b2,
   packet_inspector: 0x84bd00,
+  data_diode: 0x84bd00,
+  network_segmentation: 0xe7d747,
 };
+
+const TOWER_HOTKEYS = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I'];
 
 export class UIScene extends Phaser.Scene {
   private gameScene!: Phaser.Scene;
@@ -129,6 +133,7 @@ export class UIScene extends Phaser.Scene {
     this.gameScene.events.on('ability-targeting', this.onAbilityTargeting, this);
     this.gameScene.events.on('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
     this.gameScene.events.on('show-modifiers', this.onShowModifiers, this);
+    this.gameScene.events.on('tower-selected-by-hotkey', this.onTowerSelectedByHotkey, this);
 
     // Cleanup on shutdown
     this.events.on('shutdown', () => {
@@ -145,6 +150,7 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.off('ability-targeting', this.onAbilityTargeting, this);
       this.gameScene.events.off('ability-targeting-cancelled', this.onAbilityTargetingCancelled, this);
       this.gameScene.events.off('show-modifiers', this.onShowModifiers, this);
+      this.gameScene.events.off('tower-selected-by-hotkey', this.onTowerSelectedByHotkey, this);
     });
   }
 
@@ -221,45 +227,61 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createTowerBar(): void {
-    const barY = 692;
-    const startX = 120;
-    const spacing = 180;
+    const barHeight = 44;
+    const barY = 720 - barHeight / 2;
 
-    // Solid opaque background bar — sits below the playable area
-    const barBg = this.add.rectangle(640, barY, 1280, 56, 0x0a1628, 1);
+    // Dark control panel background
+    const barBg = this.add.rectangle(640, barY, 1280, barHeight, 0x050d18, 1);
     barBg.setOrigin(0.5, 0.5);
-    // Top border to visually separate from game area
-    const barBorder = this.add.rectangle(640, barY - 28, 1280, 2, 0x044872, 1);
+    // Thin top border line
+    const barBorder = this.add.rectangle(640, barY - barHeight / 2, 1280, 1, 0x0093b2, 0.5);
     barBorder.setOrigin(0.5, 0.5);
 
+    const totalTowers = TOWERS.length;
+    const buttonWidth = 140;
+    const totalWidth = totalTowers * buttonWidth;
+    const startX = (1280 - totalWidth) / 2 + buttonWidth / 2;
+
     TOWERS.forEach((config, index) => {
-      const x = startX + index * spacing;
+      const x = startX + index * buttonWidth;
       const container = this.add.container(x, barY);
 
-      // Background panel
-      const bg = this.add.rectangle(0, 0, 160, 44, 0x044872, 0.9);
-      bg.setStrokeStyle(2, 0x0093b2);
+      // Background panel (invisible by default, shown on select)
+      const bg = this.add.rectangle(0, 0, buttonWidth - 4, barHeight - 6, 0x050d18, 0.01);
+      bg.setStrokeStyle(1, 0x0093b2, 0);
       bg.setInteractive({ useHandCursor: true });
 
-      // Colored icon square
+      // Colored square icon (8x8)
       const iconColor = TOWER_COLORS[config.id] ?? 0xffffff;
-      const icon = this.add.rectangle(-58, 0, 14, 14, iconColor, 1);
-      icon.setStrokeStyle(1, 0xffffff, 0.3);
+      const icon = this.add.rectangle(-56, 0, 8, 8, iconColor, 1);
 
-      // Tower name
-      const nameText = this.add
-        .text(-38, -10, config.name, { fontSize: '12px', color: '#FFFFFF', fontFamily: 'Arial' })
-        .setOrigin(0, 0.5);
-      // Cost
-      const costText = this.add
-        .text(-38, 8, `${config.cost}c`, { fontSize: '11px', color: '#84BD00', fontFamily: 'Arial' })
-        .setOrigin(0, 0.5);
+      // Hotkey hint
+      const hotkey = TOWER_HOTKEYS[index] ?? '';
+      const hotkeyText = this.add.text(-56, -14, hotkey, {
+        fontSize: '8px',
+        color: '#7A7B7C',
+        fontFamily: 'Courier New, monospace',
+      }).setOrigin(0.5, 0.5);
 
-      container.add([bg, icon, nameText, costText]);
+      // Tower name (dim)
+      const nameText = this.add.text(-44, -7, config.name, {
+        fontSize: '10px',
+        color: '#7A7B7C',
+        fontFamily: 'Courier New, monospace',
+      }).setOrigin(0, 0.5);
+
+      // Cost (dim)
+      const costText = this.add.text(-44, 7, `${config.cost}c`, {
+        fontSize: '10px',
+        color: '#7A7B7C',
+        fontFamily: 'Courier New, monospace',
+      }).setOrigin(0, 0.5);
+
+      container.add([bg, icon, hotkeyText, nameText, costText]);
 
       // Hover: show tooltip
       bg.on('pointerover', () => {
-        this.showTooltip(config, x, barY - 60);
+        this.showTooltip(config, x, barY - barHeight / 2 - 10);
       });
       bg.on('pointerout', () => {
         this.hideTooltip();
@@ -267,21 +289,62 @@ export class UIScene extends Phaser.Scene {
 
       // Click handler: select tower type in BuildSystem
       bg.on('pointerdown', () => {
-        this.selectedTowerId = config.id;
-        this.gameScene.events.emit('tower-selected', config.id);
-        const buildSystem = (this.gameScene as any).buildSystem;
-        if (buildSystem) {
-          buildSystem.selectTowerType(config.id);
-        }
-        // Highlight selected
-        this.towerButtons.forEach((btn) => {
-          const btnBg = btn.getAt(0) as Phaser.GameObjects.Rectangle;
-          btnBg.setStrokeStyle(2, 0x0093b2);
-        });
-        bg.setStrokeStyle(3, 0xf47f28);
+        this.selectTowerByIndex(index);
       });
 
       this.towerButtons.push(container);
+    });
+  }
+
+  private selectTowerByIndex(index: number): void {
+    if (index < 0 || index >= TOWERS.length) return;
+    const config = TOWERS[index];
+
+    this.selectedTowerId = config.id;
+    this.gameScene.events.emit('tower-selected', config.id);
+    const buildSystem = (this.gameScene as any).buildSystem;
+    if (buildSystem) {
+      buildSystem.selectTowerType(config.id);
+    }
+
+    // Update button visuals
+    this.towerButtons.forEach((btn, i) => {
+      const btnBg = btn.getAt(0) as Phaser.GameObjects.Rectangle;
+      const nameT = btn.getAt(3) as Phaser.GameObjects.Text;
+      const costT = btn.getAt(4) as Phaser.GameObjects.Text;
+
+      if (i === index) {
+        // Selected: bright text + orange border glow
+        btnBg.setStrokeStyle(2, 0xf47f28, 1);
+        nameT.setColor('#FFFFFF');
+        costT.setColor('#84BD00');
+      } else {
+        // Normal: dim
+        btnBg.setStrokeStyle(1, 0x0093b2, 0);
+        nameT.setColor('#7A7B7C');
+        costT.setColor('#7A7B7C');
+      }
+    });
+  }
+
+  private onTowerSelectedByHotkey(index: number): void {
+    // Update UI visuals to match the hotkey selection
+    if (index < 0 || index >= TOWERS.length) return;
+    this.selectedTowerId = TOWERS[index].id;
+    this.towerButtons.forEach((btn, i) => {
+      const btnBg = btn.getAt(0) as Phaser.GameObjects.Rectangle;
+      const nameT = btn.getAt(3) as Phaser.GameObjects.Text;
+      const costT = btn.getAt(4) as Phaser.GameObjects.Text;
+
+      if (i === index) {
+        btnBg.setStrokeStyle(2, 0xf47f28, 1);
+        nameT.setColor('#FFFFFF');
+        costT.setColor('#84BD00');
+      } else {
+        btnBg.setStrokeStyle(1, 0x0093b2, 0);
+        nameT.setColor('#7A7B7C');
+        costT.setColor('#7A7B7C');
+      }
     });
   }
 

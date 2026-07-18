@@ -121,6 +121,14 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-TWO', () => this.setGameSpeed(2));
     this.input.keyboard?.on('keydown-THREE', () => this.setGameSpeed(3));
 
+    // Tower selection hotkeys: Q W E R T Y U I
+    const towerKeys = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I'];
+    towerKeys.forEach((key, index) => {
+      this.input.keyboard?.on(`keydown-${key}`, () => {
+        this.selectTowerByHotkey(index);
+      });
+    });
+
     // Expose for E2E testing
     (window as unknown as Record<string, unknown>).__GAME_STATE__ = this.getGameState();
 
@@ -379,6 +387,13 @@ export class GameScene extends Phaser.Scene {
   private togglePause(): void {
     this.paused = !this.paused;
     this.events.emit('pause-toggled', this.paused);
+  }
+
+  private selectTowerByHotkey(index: number): void {
+    if (index < 0 || index >= TOWERS.length) return;
+    const config = TOWERS[index];
+    this.buildSystem.selectTowerType(config.id);
+    this.events.emit('tower-selected-by-hotkey', index);
   }
 
   sellTower(slotId: string): void {

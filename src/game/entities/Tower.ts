@@ -118,8 +118,18 @@ export class Tower extends Phaser.GameObjects.Container {
 
   showRange(): void {
     this.rangeCircle.clear();
-    this.rangeCircle.fillStyle(0x0076a8, 0.15);
-    this.rangeCircle.fillCircle(0, 0, this.getRange());
+    const range = this.getRange();
+    const color = this.getTowerColor();
+    // Dashed circle outline at low alpha
+    const segments = 32;
+    this.rangeCircle.lineStyle(1, color, 0.2);
+    for (let i = 0; i < segments; i += 2) {
+      const startAngle = (Math.PI * 2 * i) / segments;
+      const endAngle = (Math.PI * 2 * (i + 1)) / segments;
+      this.rangeCircle.beginPath();
+      this.rangeCircle.arc(0, 0, range, startAngle, endAngle, false);
+      this.rangeCircle.strokePath();
+    }
     this.rangeCircle.setVisible(true);
     this.showingRange = true;
   }
@@ -127,6 +137,20 @@ export class Tower extends Phaser.GameObjects.Container {
   hideRange(): void {
     this.rangeCircle.setVisible(false);
     this.showingRange = false;
+  }
+
+  private getTowerColor(): number {
+    const colors: Record<string, number> = {
+      firewall: 0x0076a8,
+      ids: 0x753bbd,
+      waf: 0xf47f28,
+      honeypot: 0xe7d747,
+      rate_limiter: 0x0093b2,
+      packet_inspector: 0x84bd00,
+      data_diode: 0x84bd00,
+      network_segmentation: 0xe7d747,
+    };
+    return colors[this.config.id] ?? 0x0076a8;
   }
 
   private fireAt(target: Enemy, abilitySystem?: AbilitySystem): void {

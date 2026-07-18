@@ -4,6 +4,8 @@ import { TOWERS } from '../data/towers';
 import { calculateFinalScore, calculateAccuracy } from '../logic/scoring';
 import { ModifierCardUI } from '../ui/ModifierCardUI';
 import { getRandomModifiers } from '../data/modifiers';
+import { ScoreBoard, ScoreEntry } from '../systems/ScoreBoard';
+import { Analytics } from '../systems/Analytics';
 
 const TOWER_COLORS: Record<string, number> = {
   firewall: 0x0076a8,
@@ -137,6 +139,8 @@ export class UIScene extends Phaser.Scene {
 
     // Cleanup on shutdown
     this.events.on('shutdown', () => {
+      const existingInput = document.getElementById('score-input');
+      if (existingInput) existingInput.remove();
       this.gameScene.events.off('threat-killed', this.onThreatKilled, this);
       this.gameScene.events.off('false-positive', this.onFalsePositive, this);
       this.gameScene.events.off('legit-delivered', this.onLegitDelivered, this);
@@ -853,6 +857,8 @@ export class UIScene extends Phaser.Scene {
       btnBg.setFillStyle(0x0076a8);
     });
     btnBg.on('pointerdown', () => {
+      const existingInput = document.getElementById('score-input');
+      if (existingInput) existingInput.remove();
       this.scene.stop('UI');
       this.scene.stop('Game');
       this.scene.start('Menu');
@@ -867,6 +873,100 @@ export class UIScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
+    });
+
+    // === USERNAME INPUT FOR HIGH SCORE ===
+    const inputContainer = document.createElement('div');
+    inputContainer.id = 'score-input';
+    inputContainer.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, 80px);
+      z-index: 1000;
+      text-align: center;
+    `;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 16;
+    input.placeholder = 'Enter handle...';
+    input.style.cssText = `
+      background: #0A1628;
+      border: 2px solid #0093B2;
+      color: #84BD00;
+      font-family: monospace;
+      font-size: 18px;
+      padding: 8px 16px;
+      width: 200px;
+      text-align: center;
+      outline: none;
+    `;
+
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'SUBMIT SCORE';
+    submitBtn.style.cssText = `
+      background: #0076A8;
+      border: none;
+      color: white;
+      font-family: monospace;
+      font-size: 16px;
+      padding: 8px 20px;
+      margin-left: 10px;
+      cursor: pointer;
+    `;
+
+    inputContainer.appendChild(input);
+    inputContainer.appendChild(submitBtn);
+    document.body.appendChild(inputContainer);
+
+    setTimeout(() => input.focus(), 100);
+
+    const submitScore = () => {
+      const name = input.value.trim() || 'Anonymous';
+      const entry: ScoreEntry = {
+        name,
+        score: finalScore,
+        waves: scoreState.currentWave,
+        accuracy: Math.round(accuracy * 100),
+        difficulty: difficultyName,
+        timestamp: Date.now(),
+      };
+      const rank = ScoreBoard.addScore(entry);
+
+      Analytics.track('score-submit', {
+        name,
+        score: finalScore,
+        waves: scoreState.currentWave,
+        accuracy: Math.round(accuracy * 100),
+        difficulty: difficultyName,
+      });
+
+      inputContainer.remove();
+      this.showLocalLeaderboard(rank, name);
+    };
+
+    submitBtn.addEventListener('click', submitScore);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitScore();
+    });
+  }
+
+  private showLocalLeaderboard(playerRank: number, playerName: string): void {
+    const scores = ScoreBoard.getTopScores(10);
+
+    this.add.text(640, 420, 'HIGH SCORES', {
+      fontSize: '16px', color: '#0093B2', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    scores.forEach((entry, index) => {
+      const rank = index + 1;
+      const isPlayer = entry.name === playerName && rank === playerRank;
+      const color = isPlayer ? '#84BD00' : '#AAAAAA';
+      const text = `${String(rank).padStart(2, ' ')}. ${entry.name.padEnd(16, ' ')} ${String(entry.score).padStart(7, ' ')}  W${entry.waves}  ${entry.accuracy}%`;
+      this.add.text(640, 445 + index * 20, text, {
+        fontSize: '12px', color, fontFamily: 'monospace',
+      }).setOrigin(0.5);
     });
   }
 

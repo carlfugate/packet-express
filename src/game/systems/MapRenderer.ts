@@ -1,10 +1,13 @@
 import { MAP_DATA } from '../data/maps';
+import { GAME_CONFIG } from '../config';
 
 export class MapRenderer {
   private scene: Phaser.Scene;
   private trackGraphics: Phaser.GameObjects.Graphics;
   private slotGraphics: Phaser.GameObjects.Graphics;
   private slotPositions: Map<string, { x: number; y: number }> = new Map();
+  private slotLabels: Map<string, Phaser.GameObjects.Text> = new Map();
+  private signalDots: Phaser.GameObjects.Arc[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -15,146 +18,58 @@ export class MapRenderer {
       this.slotPositions.set(slot.id, { x: slot.x, y: slot.y });
     }
 
-    // Dark navy gradient background
     this.drawBackground();
   }
 
   private drawBackground(): void {
     const bg = this.scene.add.graphics();
     bg.setDepth(-10);
-    // Navy gradient from top to bottom
-    const steps = 20;
-    const h = 720 / steps;
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      // Interpolate from #0A1628 (top) to #061020 (bottom)
-      const r = Math.round(10 + t * (-4));
-      const g2 = Math.round(22 + t * (-6));
-      const b = Math.round(40 + t * (-8));
-      const color = (Math.max(0, r) << 16) | (Math.max(0, g2) << 8) | Math.max(0, b);
-      bg.fillStyle(color, 1);
-      bg.fillRect(0, i * h, 1280, h + 1);
-    }
-    // Subtle grid overlay
-    bg.lineStyle(1, 0x0076a8, 0.05);
-    for (let x = 0; x < 1280; x += 40) {
-      bg.beginPath();
-      bg.moveTo(x, 0);
-      bg.lineTo(x, 720);
-      bg.strokePath();
-    }
-    for (let y = 0; y < 720; y += 40) {
-      bg.beginPath();
-      bg.moveTo(0, y);
-      bg.lineTo(1280, y);
-      bg.strokePath();
-    }
 
-    // IT Zone: Circuit board dots pattern (top half)
-    this.drawITZoneDetail(bg);
+    // Solid dark navy background
+    bg.fillStyle(0x0a1628, 1);
+    bg.fillRect(0, 0, 1280, 720);
 
-    // OT Zone: Industrial icons (bottom half)
-    this.drawOTZoneDetail(bg);
+    // Subtle dashed grid — control system display aesthetic
+    const gridSpacing = 60;
+    bg.lineStyle(1, 0x0076a8, 0.08);
 
-    // Vignette overlay (darker edges)
-    this.drawVignette(bg);
+    for (let x = 0; x < 1280; x += gridSpacing) {
+      this.drawDashedLine(bg, x, 0, x, 720, 4, 8);
+    }
+    for (let y = 0; y < 720; y += gridSpacing) {
+      this.drawDashedLine(bg, 0, y, 1280, y, 4, 8);
+    }
   }
 
-  private drawITZoneDetail(bg: Phaser.GameObjects.Graphics): void {
-    // Faint circuit-board dot grid at very low opacity
-    bg.fillStyle(0x0093b2, 0.04);
-    for (let x = 20; x < 1280; x += 60) {
-      for (let y = 20; y < 300; y += 60) {
-        bg.fillCircle(x, y, 1.5);
-        // Occasional connection lines between dots
-        if (Math.random() > 0.6 && x + 60 < 1280) {
-          bg.lineStyle(1, 0x0093b2, 0.03);
-          bg.beginPath();
-          bg.moveTo(x, y);
-          bg.lineTo(x + 60, y);
-          bg.strokePath();
-        }
-        if (Math.random() > 0.7 && y + 60 < 300) {
-          bg.lineStyle(1, 0x0093b2, 0.03);
-          bg.beginPath();
-          bg.moveTo(x, y);
-          bg.lineTo(x, y + 60);
-          bg.strokePath();
-        }
+  private drawDashedLine(
+    g: Phaser.GameObjects.Graphics,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    dash: number,
+    gap: number,
+  ): void {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / length;
+    const uy = dy / length;
+    let drawn = 0;
+    let drawing = true;
+
+    while (drawn < length) {
+      const segLen = drawing ? dash : gap;
+      const end = Math.min(drawn + segLen, length);
+      if (drawing) {
+        g.beginPath();
+        g.moveTo(x1 + ux * drawn, y1 + uy * drawn);
+        g.lineTo(x1 + ux * end, y1 + uy * end);
+        g.strokePath();
       }
+      drawn = end;
+      drawing = !drawing;
     }
-  }
-
-  private drawOTZoneDetail(bg: Phaser.GameObjects.Graphics): void {
-    // Scattered industrial icons at very low opacity in OT zone (y > 320)
-    const iconPositions = [
-      { x: 100, y: 400 }, { x: 300, y: 450 }, { x: 500, y: 380 },
-      { x: 700, y: 500 }, { x: 900, y: 420 }, { x: 1100, y: 460 },
-      { x: 200, y: 550 }, { x: 600, y: 600 }, { x: 1000, y: 550 },
-      { x: 400, y: 650 }, { x: 800, y: 620 }, { x: 150, y: 650 },
-    ];
-
-    for (let i = 0; i < iconPositions.length; i++) {
-      const pos = iconPositions[i];
-      const type = i % 3;
-
-      if (type === 0) {
-        // Tiny gear shape
-        bg.lineStyle(1, 0xf47f28, 0.04);
-        const teeth = 6;
-        bg.beginPath();
-        for (let t = 0; t < teeth * 2; t++) {
-          const angle = (Math.PI * t) / teeth;
-          const r = t % 2 === 0 ? 8 : 5;
-          const px = pos.x + r * Math.cos(angle);
-          const py = pos.y + r * Math.sin(angle);
-          if (t === 0) bg.moveTo(px, py);
-          else bg.lineTo(px, py);
-        }
-        bg.closePath();
-        bg.strokePath();
-      } else if (type === 1) {
-        // Railroad crossing X
-        bg.lineStyle(1, 0xe7d747, 0.04);
-        bg.beginPath();
-        bg.moveTo(pos.x - 6, pos.y - 6);
-        bg.lineTo(pos.x + 6, pos.y + 6);
-        bg.strokePath();
-        bg.beginPath();
-        bg.moveTo(pos.x + 6, pos.y - 6);
-        bg.lineTo(pos.x - 6, pos.y + 6);
-        bg.strokePath();
-      } else {
-        // Signal light (small circle with line below)
-        bg.lineStyle(1, 0xf47f28, 0.04);
-        bg.strokeCircle(pos.x, pos.y, 4);
-        bg.beginPath();
-        bg.moveTo(pos.x, pos.y + 4);
-        bg.lineTo(pos.x, pos.y + 10);
-        bg.strokePath();
-      }
-    }
-  }
-
-  private drawVignette(bg: Phaser.GameObjects.Graphics): void {
-    // Darken edges with semi-transparent rectangles
-    const edgeAlpha = 0.15;
-    // Top edge
-    bg.fillStyle(0x000000, edgeAlpha);
-    bg.fillRect(0, 0, 1280, 40);
-    bg.fillStyle(0x000000, edgeAlpha * 0.6);
-    bg.fillRect(0, 40, 1280, 30);
-    // Bottom edge
-    bg.fillStyle(0x000000, edgeAlpha);
-    bg.fillRect(0, 680, 1280, 40);
-    bg.fillStyle(0x000000, edgeAlpha * 0.6);
-    bg.fillRect(0, 650, 1280, 30);
-    // Left edge
-    bg.fillStyle(0x000000, edgeAlpha * 0.5);
-    bg.fillRect(0, 0, 30, 720);
-    // Right edge
-    bg.fillStyle(0x000000, edgeAlpha * 0.5);
-    bg.fillRect(1250, 0, 30, 720);
   }
 
   drawTrack(waypoints: Array<{ x: number; y: number }>): void {
@@ -164,37 +79,10 @@ export class MapRenderer {
 
     if (waypoints.length < 2) return;
 
-    // OT Zone: Semi-transparent orange overlay covering the bottom half (OT zone)
-    g.fillStyle(0xf47f28, 0.04);
-    g.fillRect(0, 310, 1280, 330);
+    const boundaryIndex = GAME_CONFIG.otZone.boundaryWaypointIndex;
 
-    // Hazard stripe at boundary (y=310) — alternating yellow/black diagonal lines
-    const stripeY = 310;
-    const stripeHeight = 8;
-    const stripeWidth = 16;
-    for (let x = 0; x < 1280; x += stripeWidth * 2) {
-      // Yellow stripe
-      g.fillStyle(0xe7d747, 0.8);
-      g.beginPath();
-      g.moveTo(x, stripeY);
-      g.lineTo(x + stripeWidth, stripeY);
-      g.lineTo(x + stripeWidth + stripeHeight, stripeY + stripeHeight);
-      g.lineTo(x + stripeHeight, stripeY + stripeHeight);
-      g.closePath();
-      g.fillPath();
-      // Black stripe
-      g.fillStyle(0x000000, 0.8);
-      g.beginPath();
-      g.moveTo(x + stripeWidth, stripeY);
-      g.lineTo(x + stripeWidth * 2, stripeY);
-      g.lineTo(x + stripeWidth * 2 + stripeHeight, stripeY + stripeHeight);
-      g.lineTo(x + stripeWidth + stripeHeight, stripeY + stripeHeight);
-      g.closePath();
-      g.fillPath();
-    }
-
-    // Step 1: Draw the rail bed (thick outer line)
-    g.lineStyle(22, 0x3a3a3a, 1);
+    // Draw main track: thin 3px light gray line
+    g.lineStyle(3, 0xaaaaaa, 1);
     g.beginPath();
     g.moveTo(waypoints[0].x, waypoints[0].y);
     for (let i = 1; i < waypoints.length; i++) {
@@ -202,140 +90,283 @@ export class MapRenderer {
     }
     g.strokePath();
 
-    // Step 2: Draw the dark center (creates the appearance of dual rails)
-    g.lineStyle(14, 0x0a1628, 1);
+    // Segment coloring overlays
+    // IT zone (first half): green tint
+    g.lineStyle(3, 0x84bd00, 0.3);
     g.beginPath();
     g.moveTo(waypoints[0].x, waypoints[0].y);
-    for (let i = 1; i < waypoints.length; i++) {
+    for (let i = 1; i <= boundaryIndex && i < waypoints.length; i++) {
       g.lineTo(waypoints[i].x, waypoints[i].y);
     }
     g.strokePath();
 
-    // Step 3: Draw cross-ties on straight segments only, with margin to avoid corner overlap
-    g.lineStyle(3, 0x555555, 0.9);
+    // OT zone (second half): amber tint
+    if (boundaryIndex < waypoints.length) {
+      g.lineStyle(3, 0xf47f28, 0.2);
+      g.beginPath();
+      g.moveTo(waypoints[boundaryIndex].x, waypoints[boundaryIndex].y);
+      for (let i = boundaryIndex + 1; i < waypoints.length; i++) {
+        g.lineTo(waypoints[i].x, waypoints[i].y);
+      }
+      g.strokePath();
+    }
+
+    // Flow direction arrows along the track
+    this.drawFlowArrows(g, waypoints, boundaryIndex);
+
+    // Signal dots at waypoints
+    this.drawSignalDots(waypoints);
+
+    // Switch indicators at corners
+    this.drawSwitchIndicators(g, waypoints);
+
+    // Zone boundary line
+    this.drawZoneBoundary(g, waypoints, boundaryIndex);
+
+    // Zone labels
+    this.addZoneLabels();
+
+    // Data flow particles
+    this.addDataFlowParticles(waypoints, boundaryIndex);
+  }
+
+  private drawFlowArrows(
+    g: Phaser.GameObjects.Graphics,
+    waypoints: Array<{ x: number; y: number }>,
+    boundaryIndex: number,
+  ): void {
+    const arrowSpacing = 80;
+    const arrowSize = 8;
+
     for (let i = 0; i < waypoints.length - 1; i++) {
       const a = waypoints[i];
       const b = waypoints[i + 1];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const segDist = Math.sqrt(dx * dx + dy * dy);
+      const ux = dx / segDist;
+      const uy = dy / segDist;
 
-      // Determine normal (perpendicular)
-      const nx = -dy / dist;
-      const ny = dx / dist;
+      const inOT = i >= boundaryIndex;
+      const color = inOT ? 0xf47f28 : 0x84bd00;
+      g.fillStyle(color, 0.7);
 
-      // Draw ties every 25px, but skip the first and last 15px to avoid corner overlap
-      const margin = 15;
-      const tieSpacing = 25;
+      let d = arrowSpacing / 2;
+      while (d < segDist - arrowSpacing / 4) {
+        const cx = a.x + ux * d;
+        const cy = a.y + uy * d;
 
-      let d = margin;
-      while (d < dist - margin) {
-        const t = d / dist;
-        const cx = a.x + dx * t;
-        const cy = a.y + dy * t;
-        g.beginPath();
-        g.moveTo(cx + nx * 11, cy + ny * 11);
-        g.lineTo(cx - nx * 11, cy - ny * 11);
-        g.strokePath();
-        d += tieSpacing;
-      }
-    }
-
-    // Step 4: Draw thin rail lines on top of ties for detail (per-segment, not continuous)
-    for (const offset of [-8, 8]) {
-      g.lineStyle(2, 0x666666, 1);
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        const a = waypoints[i];
-        const b = waypoints[i + 1];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const nx = -dy / dist;
-        const ny = dx / dist;
+        // Triangle arrow pointing in direction of travel
+        const tipX = cx + ux * (arrowSize / 2);
+        const tipY = cy + uy * (arrowSize / 2);
+        const baseX = cx - ux * (arrowSize / 2);
+        const baseY = cy - uy * (arrowSize / 2);
+        // Perpendicular
+        const px = -uy;
+        const py = ux;
 
         g.beginPath();
-        g.moveTo(a.x + nx * offset, a.y + ny * offset);
-        g.lineTo(b.x + nx * offset, b.y + ny * offset);
+        g.moveTo(tipX, tipY);
+        g.lineTo(baseX + px * (arrowSize / 3), baseY + py * (arrowSize / 3));
+        g.lineTo(baseX - px * (arrowSize / 3), baseY - py * (arrowSize / 3));
+        g.closePath();
+        g.fillPath();
+
+        d += arrowSpacing;
+      }
+    }
+  }
+
+  private drawSignalDots(waypoints: Array<{ x: number; y: number }>): void {
+    // Clear old signal dots
+    for (const dot of this.signalDots) {
+      dot.destroy();
+    }
+    this.signalDots = [];
+
+    for (const wp of waypoints) {
+      const dot = this.scene.add.circle(wp.x, wp.y, 3, 0x5ea500, 1);
+      dot.setDepth(-4);
+      this.signalDots.push(dot);
+    }
+  }
+
+  private drawSwitchIndicators(
+    g: Phaser.GameObjects.Graphics,
+    waypoints: Array<{ x: number; y: number }>,
+  ): void {
+    g.lineStyle(1, 0xaaaaaa, 0.5);
+
+    for (let i = 1; i < waypoints.length - 1; i++) {
+      const prev = waypoints[i - 1];
+      const curr = waypoints[i];
+      const next = waypoints[i + 1];
+
+      // Direction into waypoint
+      const dxIn = curr.x - prev.x;
+      const dyIn = curr.y - prev.y;
+      const distIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+      const uxIn = dxIn / distIn;
+      const uyIn = dyIn / distIn;
+
+      // Direction out of waypoint
+      const dxOut = next.x - curr.x;
+      const dyOut = next.y - curr.y;
+      const distOut = Math.sqrt(dxOut * dxOut + dyOut * dyOut);
+      const uxOut = dxOut / distOut;
+      const uyOut = dyOut / distOut;
+
+      // Only draw switch if there's a direction change (corner)
+      if (Math.abs(uxIn - uxOut) > 0.01 || Math.abs(uyIn - uyOut) > 0.01) {
+        const switchLen = 12;
+        const angle = Math.PI / 6; // 30 degrees
+
+        // Diverging line based on incoming direction
+        const cos30 = Math.cos(angle);
+        const sin30 = Math.sin(angle);
+
+        // Rotate incoming direction by +30 degrees
+        const rx1 = uxIn * cos30 - uyIn * sin30;
+        const ry1 = uxIn * sin30 + uyIn * cos30;
+        g.beginPath();
+        g.moveTo(curr.x, curr.y);
+        g.lineTo(curr.x + rx1 * switchLen, curr.y + ry1 * switchLen);
+        g.strokePath();
+
+        // Rotate incoming direction by -30 degrees
+        const rx2 = uxIn * cos30 + uyIn * sin30;
+        const ry2 = -uxIn * sin30 + uyIn * cos30;
+        g.beginPath();
+        g.moveTo(curr.x, curr.y);
+        g.lineTo(curr.x + rx2 * switchLen, curr.y + ry2 * switchLen);
         g.strokePath();
       }
     }
+  }
 
-    // Zone labels
-    this.addZoneLabels();
+  private drawZoneBoundary(
+    g: Phaser.GameObjects.Graphics,
+    waypoints: Array<{ x: number; y: number }>,
+    boundaryIndex: number,
+  ): void {
+    if (boundaryIndex >= waypoints.length) return;
 
-    // Station labels
-    this.addStationLabels(waypoints);
+    const boundaryY = waypoints[boundaryIndex].y;
 
-    // Data flow particles
-    this.addDataFlowParticles(waypoints);
+    // Thin dashed hazard stripe: alternating yellow/black 2px segments
+    const segWidth = 12;
+    for (let x = 0; x < 1280; x += segWidth * 2) {
+      // Yellow segment
+      g.lineStyle(2, 0xe7d747, 0.6);
+      g.beginPath();
+      g.moveTo(x, boundaryY);
+      g.lineTo(x + segWidth, boundaryY);
+      g.strokePath();
+
+      // Black segment
+      g.lineStyle(2, 0x000000, 0.6);
+      g.beginPath();
+      g.moveTo(x + segWidth, boundaryY);
+      g.lineTo(x + segWidth * 2, boundaryY);
+      g.strokePath();
+    }
   }
 
   private addZoneLabels(): void {
-    // IT ZONE label near the top
-    const itLabel = this.scene.add.text(600, 65, 'IT ZONE', {
-      fontSize: '14px',
+    // IT NETWORK label at top-left
+    const itLabel = this.scene.add.text(40, 65, 'IT NETWORK', {
+      fontSize: '11px',
       color: '#0093B2',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     });
     itLabel.setDepth(0);
-    itLabel.setAlpha(0.7);
+    itLabel.setAlpha(0.6);
 
-    // OT ZONE label near the boundary
-    const otLabel = this.scene.add.text(590, 325, 'OT ZONE', {
-      fontSize: '14px',
+    // OT / INDUSTRIAL label at boundary
+    const boundaryIndex = GAME_CONFIG.otZone.boundaryWaypointIndex;
+    const boundaryY =
+      boundaryIndex < MAP_DATA.waypoints.length ? MAP_DATA.waypoints[boundaryIndex].y : 380;
+
+    const otLabel = this.scene.add.text(40, boundaryY + 8, 'OT / INDUSTRIAL', {
+      fontSize: '11px',
       color: '#F47F28',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     });
     otLabel.setDepth(0);
-    otLabel.setAlpha(0.7);
+    otLabel.setAlpha(0.6);
   }
 
-  private addStationLabels(waypoints: Array<{ x: number; y: number }>): void {
-    const spawn = waypoints[0];
-    const exit = waypoints[waypoints.length - 1];
+  private addDataFlowParticles(
+    waypoints: Array<{ x: number; y: number }>,
+    boundaryIndex: number,
+  ): void {
+    const particleCount = 10;
+    const threatParticleCount = 2;
+    const path = new Phaser.Curves.Path(waypoints[0].x, waypoints[0].y);
+    for (let i = 1; i < waypoints.length; i++) {
+      path.lineTo(waypoints[i].x, waypoints[i].y);
+    }
 
-    // KC Station label at spawn (top-left)
-    const kcLabel = this.scene.add.text(spawn.x + 10, spawn.y - 30, 'KC Station', {
-      fontSize: '12px',
-      color: '#84BD00',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    });
-    kcLabel.setDepth(0);
+    // Calculate boundary t (proportion along the path)
+    let totalLength = 0;
+    const segLengths: number[] = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const dx = waypoints[i + 1].x - waypoints[i].x;
+      const dy = waypoints[i + 1].y - waypoints[i].y;
+      const seg = Math.sqrt(dx * dx + dy * dy);
+      segLengths.push(seg);
+      totalLength += seg;
+    }
+    let boundaryLength = 0;
+    for (let i = 0; i < boundaryIndex && i < segLengths.length; i++) {
+      boundaryLength += segLengths[i];
+    }
+    const boundaryT = totalLength > 0 ? boundaryLength / totalLength : 0.5;
 
-    // CHI Terminal label at exit (bottom-left)
-    const chiLabel = this.scene.add.text(exit.x + 10, exit.y - 30, 'CHI Terminal', {
-      fontSize: '12px',
-      color: '#F47F28',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    });
-    chiLabel.setDepth(0);
-  }
-
-  private addDataFlowParticles(waypoints: Array<{ x: number; y: number }>): void {
-    for (let p = 0; p < 6; p++) {
-      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 2, 0x84bd00, 0.7);
+    // Normal data flow particles
+    for (let p = 0; p < particleCount; p++) {
+      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0x84bd00, 0.8);
       dot.setDepth(1);
-
-      const path = new Phaser.Curves.Path(waypoints[0].x, waypoints[0].y);
-      for (let i = 1; i < waypoints.length; i++) {
-        path.lineTo(waypoints[i].x, waypoints[i].y);
-      }
 
       const follower = { t: 0, vec: new Phaser.Math.Vector2() };
       this.scene.tweens.add({
         targets: follower,
         t: 1,
-        duration: 14000,
+        duration: 10000,
         repeat: -1,
-        delay: p * 2300,
+        delay: p * 1000,
         onUpdate: () => {
           path.getPoint(follower.t, follower.vec);
           dot.setPosition(follower.vec.x, follower.vec.y);
-          dot.setAlpha(0.3 + Math.sin(follower.t * Math.PI * 6) * 0.4);
+          // Color based on zone
+          if (follower.t > boundaryT) {
+            dot.setFillStyle(0xf47f28, 0.8); // Amber in OT zone
+          } else {
+            dot.setFillStyle(0x84bd00, 0.8); // Green in IT zone
+          }
+        },
+      });
+    }
+
+    // Occasional red threat traffic particles (purely cosmetic)
+    for (let p = 0; p < threatParticleCount; p++) {
+      const dot = this.scene.add.circle(waypoints[0].x, waypoints[0].y, 1.5, 0xff3333, 0.6);
+      dot.setDepth(1);
+
+      const follower = { t: 0, vec: new Phaser.Math.Vector2() };
+      this.scene.tweens.add({
+        targets: follower,
+        t: 1,
+        duration: 8000,
+        repeat: -1,
+        delay: 3000 + p * 5000,
+        onUpdate: () => {
+          path.getPoint(follower.t, follower.vec);
+          dot.setPosition(follower.vec.x, follower.vec.y);
+          // Pulse alpha for threat feel
+          dot.setAlpha(0.3 + Math.sin(follower.t * Math.PI * 4) * 0.3);
         },
       });
     }
@@ -346,70 +377,39 @@ export class MapRenderer {
     g.clear();
     g.setDepth(-2);
 
-    const slotSize = 44;
+    const slotSize = 36;
     const half = slotSize / 2;
+    const cornerRadius = 4;
 
     for (const slot of slots) {
-      // Glow effect (outer)
-      g.fillStyle(0x0093b2, 0.1);
-      g.fillRect(slot.x - half - 2, slot.y - half - 2, slotSize + 4, slotSize + 4);
+      // Thin rectangular outline with rounded corners
+      g.lineStyle(1, 0x0093b2, 0.4);
+      g.strokeRoundedRect(slot.x - half, slot.y - half, slotSize, slotSize, cornerRadius);
 
-      // Fill: dark navy
-      g.fillStyle(0x044872, 0.6);
-      g.fillRect(slot.x - half, slot.y - half, slotSize, slotSize);
-
-      // Dashed border
-      g.lineStyle(2, 0x0093b2, 0.8);
-      this.drawDashedRect(g, slot.x - half, slot.y - half, slotSize, slotSize, 6, 4);
-
-      // Plus icon in center
-      g.lineStyle(2, 0x0093b2, 0.4);
+      // Small "+" in center at 0.3 alpha
+      g.lineStyle(1, 0x0093b2, 0.3);
       g.beginPath();
-      g.moveTo(slot.x, slot.y - 8);
-      g.lineTo(slot.x, slot.y + 8);
-      g.moveTo(slot.x - 8, slot.y);
-      g.lineTo(slot.x + 8, slot.y);
+      g.moveTo(slot.x, slot.y - 6);
+      g.lineTo(slot.x, slot.y + 6);
+      g.moveTo(slot.x - 6, slot.y);
+      g.lineTo(slot.x + 6, slot.y);
       g.strokePath();
-    }
-  }
 
-  private drawDashedRect(
-    g: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    dash: number,
-    gap: number,
-  ): void {
-    const sides = [
-      { x1: x, y1: y, x2: x + w, y2: y },
-      { x1: x + w, y1: y, x2: x + w, y2: y + h },
-      { x1: x + w, y1: y + h, x2: x, y2: y + h },
-      { x1: x, y1: y + h, x2: x, y2: y },
-    ];
-
-    for (const side of sides) {
-      const dx = side.x2 - side.x1;
-      const dy = side.y2 - side.y1;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const ux = dx / length;
-      const uy = dy / length;
-      let drawn = 0;
-      let drawing = true;
-
-      while (drawn < length) {
-        const segLen = drawing ? dash : gap;
-        const end = Math.min(drawn + segLen, length);
-        if (drawing) {
-          g.beginPath();
-          g.moveTo(side.x1 + ux * drawn, side.y1 + uy * drawn);
-          g.lineTo(side.x1 + ux * end, side.y1 + uy * end);
-          g.strokePath();
-        }
-        drawn = end;
-        drawing = !drawing;
-      }
+      // Station label below each slot
+      const slotIndex = parseInt(slot.id.replace('slot_', ''), 10);
+      const label = this.scene.add.text(
+        slot.x,
+        slot.y + half + 4,
+        `NODE-${String(slotIndex).padStart(2, '0')}`,
+        {
+          fontSize: '9px',
+          color: '#7A7B7C',
+          fontFamily: 'Arial',
+        },
+      );
+      label.setOrigin(0.5, 0);
+      label.setDepth(0);
+      this.slotLabels.set(slot.id, label);
     }
   }
 
@@ -417,17 +417,44 @@ export class MapRenderer {
     const pos = this.slotPositions.get(slotId);
     if (!pos) return;
 
-    const slotSize = 44;
+    const slotSize = 36;
     const half = slotSize / 2;
+    const cornerRadius = 4;
     const g = this.slotGraphics;
 
-    g.fillStyle(color, 0.4);
-    g.fillRect(pos.x - half, pos.y - half, slotSize, slotSize);
-    g.lineStyle(2, color, 1);
-    g.strokeRect(pos.x - half, pos.y - half, slotSize, slotSize);
+    // Brighten border to full teal
+    g.lineStyle(1, color, 1);
+    g.strokeRoundedRect(pos.x - half, pos.y - half, slotSize, slotSize, cornerRadius);
   }
 
-  clearHighlight(slotId: string): void {
+  clearHighlight(_slotId: string): void {
     this.drawTowerSlots(MAP_DATA.towerSlots);
+  }
+
+  /** Update a slot label when a tower is placed (e.g., "FW-01", "IDS-02") */
+  updateSlotLabel(slotId: string, towerAbbrev: string): void {
+    const label = this.slotLabels.get(slotId);
+    if (label) {
+      const slotIndex = parseInt(slotId.replace('slot_', ''), 10);
+      label.setText(`${towerAbbrev}-${String(slotIndex).padStart(2, '0')}`);
+    }
+  }
+
+  /** Flash signal dots red when enemies are near (call from game loop) */
+  flashSignalsNearEnemies(enemyPositions: Array<{ x: number; y: number }>): void {
+    const proximityThreshold = 60;
+
+    for (const dot of this.signalDots) {
+      let nearEnemy = false;
+      for (const enemy of enemyPositions) {
+        const dx = dot.x - enemy.x;
+        const dy = dot.y - enemy.y;
+        if (dx * dx + dy * dy < proximityThreshold * proximityThreshold) {
+          nearEnemy = true;
+          break;
+        }
+      }
+      dot.setFillStyle(nearEnemy ? 0xff0000 : 0x5ea500, 1);
+    }
   }
 }
